@@ -28,7 +28,7 @@ const dict = {
         mode_extract: "Tách PDF", desc_extract: "Trích xuất các trang đã chọn",
         mode_delete: "Xóa Trang", desc_delete: "Loại bỏ các trang thừa",
         mode_rotate: "Xoay PDF", desc_rotate: "Sửa lỗi trang bị ngược",
-        mode_encrypt: "Bảo mật PDF", desc_encrypt: "Đặt mật khẩu & Phân quyền", // MỚI
+        mode_encrypt: "Bảo mật PDF", desc_encrypt: "Đặt mật khẩu & Phân quyền", 
         
         btn_back: "Quay lại", btn_select_all: "Chọn tất cả", btn_invert: "Đảo chọn",
         btn_rotate_selected: "Xoay 90°", btn_cancel: "Hủy",
@@ -38,16 +38,29 @@ const dict = {
         up_title_single: "Kéo thả 1 file PDF vào đây", 
         up_sub_rotate: "Để xoay các trang bị ngược", 
         up_sub_select: "Để chọn các trang cần xử lý",
-        up_sub_encrypt: "Để thiết lập mật khẩu và quyền", // MỚI
+        up_sub_encrypt: "Để thiết lập mật khẩu và quyền", 
         
         exec_merge: "Xuất File Đã Gộp", exec_extract: "Trích Xuất File", 
         exec_delete: "Xóa & Xuất File", exec_rotate: "Xuất File Đã Xoay",
-        exec_encrypt: "Mã Hóa & Xuất File", // MỚI
+        exec_encrypt: "Mã Hóa & Xuất File", 
         
         alert_no_file: "Vui lòng chọn file PDF!", alert_merge_count: "Vui lòng chọn từ 2 file trở lên để Gộp!",
         alert_no_page: "Không có trang nào để xuất! Vui lòng kiểm tra lại thao tác.",
-        alert_api_error: "Lỗi kết nối máy chủ mã hóa!", // MỚI
-        page_text: "Trang"
+        alert_api_error: "Lỗi kết nối máy chủ mã hóa!", 
+        page_text: "Trang",
+
+        // TỪ ĐIỂN PHẦN BẢO MẬT (ENCRYPT)
+        enc_title: "Cài đặt Bảo mật & Quyền truy cập",
+        enc_user_pwd: "Mật khẩu mở file (User Password)",
+        enc_owner_pwd: "Mật khẩu quản lý quyền (Owner Password)",
+        enc_permissions: "Cho phép thực hiện:",
+        chk_print: "In ấn",
+        chk_highres: "In độ phân giải cao",
+        chk_copy: "Sao chép văn bản & hình ảnh",
+        chk_modify: "Chỉnh sửa nội dung",
+        chk_fill: "Điền biểu mẫu",
+        chk_annotate: "Thêm nhận xét (Annotation)",
+        chk_assemble: "Chèn, xoay, xóa trang"
     },
     en: {
         lang_btn: "🇺🇸 EN",
@@ -56,7 +69,7 @@ const dict = {
         mode_extract: "Extract PDF", desc_extract: "Extract selected pages",
         mode_delete: "Delete Pages", desc_delete: "Remove unwanted pages",
         mode_rotate: "Rotate PDF", desc_rotate: "Fix upside-down pages",
-        mode_encrypt: "Encrypt PDF", desc_encrypt: "Set password & permissions", // MỚI
+        mode_encrypt: "Encrypt PDF", desc_encrypt: "Set password & permissions", 
         
         btn_back: "Back", btn_select_all: "Select All", btn_invert: "Invert",
         btn_rotate_selected: "Rotate 90°", btn_cancel: "Cancel",
@@ -66,16 +79,29 @@ const dict = {
         up_title_single: "Drag & drop 1 PDF file here", 
         up_sub_rotate: "To rotate upside-down pages", 
         up_sub_select: "To select pages for processing",
-        up_sub_encrypt: "To set security options", // MỚI
+        up_sub_encrypt: "To set security options", 
         
         exec_merge: "Export Merged File", exec_extract: "Extract Selected File", 
         exec_delete: "Delete & Export", exec_rotate: "Export Rotated File",
-        exec_encrypt: "Encrypt & Export File", // MỚI
+        exec_encrypt: "Encrypt & Export File", 
         
         alert_no_file: "Please select a PDF file!", alert_merge_count: "Please select 2 or more files to Merge!",
         alert_no_page: "No pages selected to export! Please check your selection.",
-        alert_api_error: "Server connection error during encryption!", // MỚI
-        page_text: "Page"
+        alert_api_error: "Server connection error during encryption!", 
+        page_text: "Page",
+
+        // TỪ ĐIỂN PHẦN BẢO MẬT (ENCRYPT)
+        enc_title: "Security & Permissions Settings",
+        enc_user_pwd: "Open Document Password (User)",
+        enc_owner_pwd: "Permissions Password (Owner)",
+        enc_permissions: "Allow the following:",
+        chk_print: "Printing",
+        chk_highres: "High Resolution Printing",
+        chk_copy: "Copying text & images",
+        chk_modify: "Modifying content",
+        chk_fill: "Filling form fields",
+        chk_annotate: "Commenting (Annotations)",
+        chk_assemble: "Insert, rotate, delete pages"
     }
 };
 
@@ -98,7 +124,7 @@ const DOM = {
     previewGrid: document.getElementById('previewGrid'),
     loadingMsg: document.getElementById('loadingMsg'),
     
-    encryptOptions: document.getElementById('encryptOptions'), // MỚI - Vùng cài đặt Password
+    encryptOptions: document.getElementById('encryptOptions'), 
     
     btnBackHome: document.getElementById('btnBackHome'),
     btnCancel: document.getElementById('btnCancel'),
@@ -194,6 +220,11 @@ function resetToHome() {
     DOM.uploadScreen.style.display = 'none';
     DOM.homeScreen.style.display = 'block';
     DOM.fileInput.value = '';
+    
+    // Reset Form Mã hóa
+    if(document.getElementById('userPassword')) document.getElementById('userPassword').value = '';
+    if(document.getElementById('ownerPassword')) document.getElementById('ownerPassword').value = '';
+
     currentMode = '';
     uploadedFiles = []; pdfDocuments = []; sourcePdfDocuments = []; pagesData = [];
 }
@@ -278,6 +309,7 @@ async function renderGrid() {
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
         applyCardRotation(card, item.rotation);
 
+        // Bỏ qua khả năng click chọn nếu đang gộp hoặc mã hóa
         if (currentMode !== 'merge' && currentMode !== 'encrypt') {
             card.addEventListener('click', () => {
                 item.selected = !item.selected;
@@ -357,7 +389,7 @@ async function processEncryptionViaAPI() {
     formData.append('permAnnotate', document.getElementById('permAnnotate').checked);
     formData.append('permAssemble', document.getElementById('permAssemble').checked);
 
-    // CHÚ Ý: Đổi đường dẫn thành Domain thật của Backend Node.js khi bạn đẩy web lên mạng
+    // CHÚ Ý: Đổi thành URL Server backend của bạn khi triển khai thực tế
     const API_URL = 'http://localhost:3000/api/encrypt'; 
 
     const response = await fetch(API_URL, {
@@ -367,7 +399,7 @@ async function processEncryptionViaAPI() {
 
     if (!response.ok) throw new Error(dict[currentLang].alert_api_error);
 
-    // Nhận file bảo mật trả về
+    // Nhận file bảo mật trả về và tải xuống
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -398,4 +430,53 @@ async function processLocalPDF() {
         newPdf.addPage(page);
     }
     
-    const bytes
+    const bytes = await newPdf.save();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `PDF_Tools_${currentMode}_${Date.now()}.pdf`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// ==========================================
+// 10. XEM TOÀN TRANG (ZOOM MODAL)
+// ==========================================
+async function openZoomModal(index) {
+    currentZoomIndex = index;
+    DOM.zoomModal.classList.add('active');
+    DOM.zoomPageText.innerText = `...`;
+    
+    DOM.btnPrevPage.style.display = index > 0 ? 'block' : 'none';
+    DOM.btnNextPage.style.display = index < pagesData.length - 1 ? 'block' : 'none';
+
+    try {
+        const item = pagesData[index];
+        const page = await pdfDocuments[item.fileIdx].getPage(item.pageIdx + 1);
+        
+        let viewport = page.getViewport({ scale: 1 });
+        const scale = Math.min((window.innerWidth * 0.85) / viewport.width, (window.innerHeight * 0.85) / viewport.height, 2.5); 
+        viewport = page.getViewport({ scale: scale });
+        
+        const ctx = DOM.zoomCanvas.getContext('2d');
+        DOM.zoomCanvas.width = viewport.width; DOM.zoomCanvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        
+        DOM.zoomPageText.innerText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (${dict[currentLang].page_text} ${item.pageIdx + 1})` : `${dict[currentLang].page_text} ${item.pageIdx + 1}`;
+    } catch (error) {
+        DOM.zoomPageText.innerText = "Error!";
+    }
+}
+
+DOM.btnPrevPage.addEventListener('click', (e) => { e.stopPropagation(); if (currentZoomIndex > 0) openZoomModal(currentZoomIndex - 1); });
+DOM.btnNextPage.addEventListener('click', (e) => { e.stopPropagation(); if (currentZoomIndex < pagesData.length - 1) openZoomModal(currentZoomIndex + 1); });
+
+document.addEventListener('keydown', (e) => {
+    if (!DOM.zoomModal.classList.contains('active')) return;
+    if (e.key === 'ArrowLeft' && currentZoomIndex > 0) openZoomModal(currentZoomIndex - 1);
+    else if (e.key === 'ArrowRight' && currentZoomIndex < pagesData.length - 1) openZoomModal(currentZoomIndex + 1);
+    else if (e.key === 'Escape') DOM.zoomModal.classList.remove('active');
+});
+
+DOM.closeModal.addEventListener('click', () => DOM.zoomModal.classList.remove('active'));
+DOM.zoomModal.addEventListener('click', e => { if (e.target === DOM.zoomModal) DOM.zoomModal.classList.remove('active'); });
