@@ -15,10 +15,10 @@
             --card-bg: #ffffff; 
             --text-main: #0f172a; 
             --text-muted: #64748b; 
-            --accent-color: #facc15; /* Vàng tia sét */
+            --accent-color: #facc15; 
             --accent-hover: #eab308; 
             --border-color: #e2e8f0;
-            --btn-text: #000000; /* Chữ đen trên nền vàng */
+            --btn-text: #000000; 
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --glow: 0 0 15px rgba(250, 204, 21, 0.5);
         }
@@ -74,13 +74,63 @@
         .btn-primary { background: var(--accent-color); color: var(--btn-text); border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn-primary:hover { background: var(--accent-hover); box-shadow: var(--glow); transform: translateY(-2px); }
         
-        /* KHU VỰC CẤU HÌNH MÃ HÓA (MỚI) */
-        #encryptOptions { display: none; background: var(--card-bg); padding: 1.5rem; border-bottom: 1px solid var(--border-color); }
-        .encrypt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-group input[type="password"] { padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); }
-        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; }
+        /* KHU VỰC CẤU HÌNH MÃ HÓA */
+        #encryptOptions { display: none; background: var(--bg-color); padding: 2rem; border-bottom: 1px solid var(--border-color); }
+        .encrypt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .form-group { display: flex; flex-direction: column; gap: 10px; }
+        .form-group label strong { color: var(--text-main); font-size: 0.95rem; }
+        
+        /* Chỉnh CSS cho ô nhập Password */
+        .form-group input[type="password"] { 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            border: 2px solid var(--border-color); 
+            background: var(--card-bg); 
+            color: var(--text-main); 
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        .form-group input[type="password"]:focus {
+            border-color: var(--accent-color);
+            box-shadow: var(--glow);
+        }
+        .form-group input[type="password"]::placeholder {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Chỉnh CSS cho Checkbox */
+        .checkbox-group { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 5px; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; cursor: pointer; color: var(--text-main); transition: 0.2s;}
+        .checkbox-label:hover { color: var(--accent-hover); }
+        .checkbox-label input[type="checkbox"] {
+            appearance: none;
+            width: 20px; height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--card-bg);
+            cursor: pointer;
+            position: relative;
+            transition: 0.2s;
+        }
+        .checkbox-label input[type="checkbox"]:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .checkbox-label input[type="checkbox"]:checked::after {
+            content: '✔';
+            position: absolute;
+            color: var(--btn-text);
+            font-size: 14px;
+            font-weight: bold;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @media (max-width: 768px) {
+            .encrypt-grid { grid-template-columns: 1fr; gap: 20px; }
+        }
 
         #previewGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px; padding: 2rem; background: var(--bg-color); max-height: 55vh; overflow-y: auto; }
         .page-card { position: relative; background: var(--card-bg); padding: 6px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; text-align: center; box-shadow: var(--shadow); transition: 0.2s; }
@@ -97,7 +147,7 @@
         
         #loadingMsg { text-align: center; padding: 2rem; display: none; color: var(--accent-color); font-weight: bold; font-size: 1.2rem;}
 
-        /* MODAL ZOOM & ĐIỀU HƯỚNG */
+        /* MODAL ZOOM */
         #zoomModal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; flex-direction: column; }
         #zoomModal.active { display: flex; }
         #closeModal { position: absolute; top: 15px; right: 25px; color: var(--accent-color); font-size: 40px; cursor: pointer; z-index: 1000;}
@@ -144,7 +194,6 @@
                     <div class="mode-title" data-i18n="mode_rotate">Xoay PDF</div>
                     <div class="mode-desc" data-i18n="desc_rotate">Sửa lỗi trang bị ngược</div>
                 </div>
-                <!-- MỚI: THÊM TÍNH NĂNG BẢO MẬT (ENCRYPT) -->
                 <div class="mode-card" data-mode="encrypt">
                     <div class="mode-icon">🔒</div>
                     <div class="mode-title" data-i18n="mode_encrypt">Bảo mật PDF</div>
@@ -178,27 +227,27 @@
                 </div>
             </div>
             
-            <!-- MỚI: BẢNG CẤU HÌNH MÃ HÓA & QUYỀN (SẼ HIỂN THỊ KHI CHỌN MODE ENCRYPT) -->
+            <!-- KHU VỰC CẤU HÌNH MÃ HÓA -->
             <div id="encryptOptions">
-                <h3 style="margin-top:0; margin-bottom: 15px; color: var(--accent-color);">Cài đặt Bảo mật & Quyền truy cập</h3>
+                <h3 style="margin-top:0; margin-bottom: 20px; color: var(--accent-color);" data-i18n="enc_title">Cài đặt Bảo mật & Quyền truy cập</h3>
                 <div class="encrypt-grid">
                     <div class="form-group">
-                        <label><strong>Mật khẩu mở file (User Password)</strong></label>
+                        <label><strong data-i18n="enc_user_pwd">Mật khẩu mở file (User Password)</strong></label>
                         <input type="password" id="userPassword" placeholder="Để trống nếu không khóa mở file">
                         
-                        <label style="margin-top: 10px;"><strong>Mật khẩu quản lý quyền (Owner Password)</strong></label>
+                        <label style="margin-top: 15px;"><strong data-i18n="enc_owner_pwd">Mật khẩu quản lý quyền (Owner Password)</strong></label>
                         <input type="password" id="ownerPassword" placeholder="Bắt buộc để khóa phân quyền">
                     </div>
                     <div class="form-group">
-                        <label><strong>Cho phép thực hiện:</strong></label>
+                        <label><strong data-i18n="enc_permissions">Cho phép thực hiện:</strong></label>
                         <div class="checkbox-group">
-                            <label class="checkbox-label"><input type="checkbox" id="permPrint" checked> In ấn</label>
-                            <label class="checkbox-label"><input type="checkbox" id="permHighResPrint" checked> In độ phân giải cao</label>
-                            <label class="checkbox-label"><input type="checkbox" id="permCopy" checked> Sao chép văn bản & hình ảnh</label>
-                            <label class="checkbox-label"><input type="checkbox" id="permModify"> Chỉnh sửa nội dung</label>
-                            <label class="checkbox-label"><input type="checkbox" id="permFillForms" checked> Điền biểu mẫu</label>
-                            <label class="checkbox-label"><input type="checkbox" id="permAnnotate" checked> Thêm nhận xét (Annotation)</label>
-                            <label class="checkbox-label"><input type="checkbox" id="permAssemble"> Chèn, xoay, xóa trang</label>
+                            <label class="checkbox-label"><input type="checkbox" id="permPrint" checked> <span data-i18n="chk_print">In ấn</span></label>
+                            <label class="checkbox-label"><input type="checkbox" id="permHighResPrint" checked> <span data-i18n="chk_highres">In độ phân giải cao</span></label>
+                            <label class="checkbox-label"><input type="checkbox" id="permCopy" checked> <span data-i18n="chk_copy">Sao chép văn bản & hình ảnh</span></label>
+                            <label class="checkbox-label"><input type="checkbox" id="permModify"> <span data-i18n="chk_modify">Chỉnh sửa nội dung</span></label>
+                            <label class="checkbox-label"><input type="checkbox" id="permFillForms" checked> <span data-i18n="chk_fill">Điền biểu mẫu</span></label>
+                            <label class="checkbox-label"><input type="checkbox" id="permAnnotate" checked> <span data-i18n="chk_annotate">Thêm nhận xét (Annotation)</span></label>
+                            <label class="checkbox-label"><input type="checkbox" id="permAssemble"> <span data-i18n="chk_assemble">Chèn, xoay, xóa trang</span></label>
                         </div>
                     </div>
                 </div>
@@ -218,17 +267,5 @@
     </div>
 
     <script src="pdf.js"></script>
-    <script>
-        // JS bổ sung nhỏ để toggle hiển thị giao diện phần Encrypt:
-        // Bạn cần tích hợp logic này vào file pdf.js của bạn khi người dùng chọn mode 'encrypt'
-        /*
-        if (currentMode === 'encrypt') {
-            document.getElementById('encryptOptions').style.display = 'block';
-            document.getElementById('previewGrid').style.display = 'none'; // Hoặc giữ để xem trước
-        } else {
-            document.getElementById('encryptOptions').style.display = 'none';
-        }
-        */
-    </script>
 </body>
 </html>
