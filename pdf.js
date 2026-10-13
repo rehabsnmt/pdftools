@@ -28,14 +28,25 @@ const dict = {
         mode_extract: "Tách PDF", desc_extract: "Trích xuất các trang đã chọn",
         mode_delete: "Xóa Trang", desc_delete: "Loại bỏ các trang thừa",
         mode_rotate: "Xoay PDF", desc_rotate: "Sửa lỗi trang bị ngược",
+        mode_encrypt: "Bảo mật PDF", desc_encrypt: "Đặt mật khẩu & Phân quyền", // MỚI
+        
         btn_back: "Quay lại", btn_select_all: "Chọn tất cả", btn_invert: "Đảo chọn",
         btn_rotate_selected: "Xoay 90°", btn_cancel: "Hủy",
         msg_processing: "Đang xử lý...", msg_loading: "Đang tải bản xem trước...",
+        
         up_title_multi: "Kéo thả nhiều file PDF vào đây", up_sub_multi: "Kéo thả để đổi vị trí các trang",
-        up_title_single: "Kéo thả 1 file PDF vào đây", up_sub_rotate: "Để xoay các trang bị ngược", up_sub_select: "Để chọn các trang cần xử lý",
-        exec_merge: "Xuất File Đã Gộp", exec_extract: "Trích Xuất File", exec_delete: "Xóa & Xuất File", exec_rotate: "Xuất File Đã Xoay",
+        up_title_single: "Kéo thả 1 file PDF vào đây", 
+        up_sub_rotate: "Để xoay các trang bị ngược", 
+        up_sub_select: "Để chọn các trang cần xử lý",
+        up_sub_encrypt: "Để thiết lập mật khẩu và quyền", // MỚI
+        
+        exec_merge: "Xuất File Đã Gộp", exec_extract: "Trích Xuất File", 
+        exec_delete: "Xóa & Xuất File", exec_rotate: "Xuất File Đã Xoay",
+        exec_encrypt: "Mã Hóa & Xuất File", // MỚI
+        
         alert_no_file: "Vui lòng chọn file PDF!", alert_merge_count: "Vui lòng chọn từ 2 file trở lên để Gộp!",
         alert_no_page: "Không có trang nào để xuất! Vui lòng kiểm tra lại thao tác.",
+        alert_api_error: "Lỗi kết nối máy chủ mã hóa!", // MỚI
         page_text: "Trang"
     },
     en: {
@@ -45,14 +56,25 @@ const dict = {
         mode_extract: "Extract PDF", desc_extract: "Extract selected pages",
         mode_delete: "Delete Pages", desc_delete: "Remove unwanted pages",
         mode_rotate: "Rotate PDF", desc_rotate: "Fix upside-down pages",
+        mode_encrypt: "Encrypt PDF", desc_encrypt: "Set password & permissions", // MỚI
+        
         btn_back: "Back", btn_select_all: "Select All", btn_invert: "Invert",
         btn_rotate_selected: "Rotate 90°", btn_cancel: "Cancel",
         msg_processing: "Processing...", msg_loading: "Loading preview...",
+        
         up_title_multi: "Drag & drop multiple PDFs here", up_sub_multi: "Drag & drop to reorder pages",
-        up_title_single: "Drag & drop 1 PDF file here", up_sub_rotate: "To rotate upside-down pages", up_sub_select: "To select pages for processing",
-        exec_merge: "Export Merged File", exec_extract: "Extract Selected File", exec_delete: "Delete & Export", exec_rotate: "Export Rotated File",
+        up_title_single: "Drag & drop 1 PDF file here", 
+        up_sub_rotate: "To rotate upside-down pages", 
+        up_sub_select: "To select pages for processing",
+        up_sub_encrypt: "To set security options", // MỚI
+        
+        exec_merge: "Export Merged File", exec_extract: "Extract Selected File", 
+        exec_delete: "Delete & Export", exec_rotate: "Export Rotated File",
+        exec_encrypt: "Encrypt & Export File", // MỚI
+        
         alert_no_file: "Please select a PDF file!", alert_merge_count: "Please select 2 or more files to Merge!",
         alert_no_page: "No pages selected to export! Please check your selection.",
+        alert_api_error: "Server connection error during encryption!", // MỚI
         page_text: "Page"
     }
 };
@@ -75,6 +97,8 @@ const DOM = {
     dropZone: document.getElementById('dropZone'),
     previewGrid: document.getElementById('previewGrid'),
     loadingMsg: document.getElementById('loadingMsg'),
+    
+    encryptOptions: document.getElementById('encryptOptions'), // MỚI - Vùng cài đặt Password
     
     btnBackHome: document.getElementById('btnBackHome'),
     btnCancel: document.getElementById('btnCancel'),
@@ -137,17 +161,29 @@ document.querySelectorAll('.mode-card').forEach(card => {
 function setupWorkspaceUI() {
     if (!currentMode) return;
     const isMerge = currentMode === 'merge';
+    const isEncrypt = currentMode === 'encrypt';
+    
     DOM.fileInput.multiple = isMerge;
     
     // Cập nhật chữ trên giao diện Upload
     DOM.uploadTitle.innerText = dict[currentLang][isMerge ? 'up_title_multi' : 'up_title_single'];
-    DOM.uploadSub.innerText = dict[currentLang][isMerge ? 'up_sub_multi' : (currentMode === 'rotate' ? 'up_sub_rotate' : 'up_sub_select')];
+    
+    let subKey = 'up_sub_select';
+    if (isMerge) subKey = 'up_sub_multi';
+    else if (currentMode === 'rotate') subKey = 'up_sub_rotate';
+    else if (currentMode === 'encrypt') subKey = 'up_sub_encrypt';
+    DOM.uploadSub.innerText = dict[currentLang][subKey];
 
-    // Bật tắt nút tùy theo chức năng
+    // Bật tắt các nút chức năng (Ẩn khi đang ở chế độ Encrypt)
     const isSelectionMode = ['extract', 'delete', 'rotate'].includes(currentMode);
     DOM.btnSelectAll.style.display = isSelectionMode ? 'block' : 'none';
     DOM.btnInvert.style.display = isSelectionMode ? 'block' : 'none';
     DOM.btnActionRotate.style.display = currentMode === 'rotate' ? 'block' : 'none';
+
+    // Ẩn hiện Bảng cấu hình mã hóa
+    if (DOM.encryptOptions) {
+        DOM.encryptOptions.style.display = isEncrypt ? 'block' : 'none';
+    }
 
     // Cập nhật tên nút Thực Thi
     DOM.executeText.innerText = dict[currentLang][`exec_${currentMode}`];
@@ -178,7 +214,6 @@ async function handleFiles(files) {
     if (validFiles.length === 0) return alert(dict[currentLang].alert_no_file);
     if (currentMode === 'merge' && validFiles.length < 2) return alert(dict[currentLang].alert_merge_count);
 
-    // FIX: Làm sạch data cũ trước khi nạp file mới
     pagesData = []; 
     pdfDocuments = []; 
     sourcePdfDocuments = [];
@@ -190,12 +225,12 @@ async function handleFiles(files) {
     
     DOM.loadingMsg.innerHTML = `⚡ ${dict[currentLang].msg_loading}`;
     DOM.loadingMsg.style.display = 'block';
+    DOM.previewGrid.innerHTML = '';
     
     try {
         for (let fileIdx = 0; fileIdx < uploadedFiles.length; fileIdx++) {
             const buffer = await uploadedFiles[fileIdx].arrayBuffer();
             
-            // Cấp 2 bản sao Buffer cho 2 thư viện khác nhau (Chống lỗi Crash RAM)
             sourcePdfDocuments[fileIdx] = await PDFDocument.load(buffer.slice(0));
             const pdfJsDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
             pdfDocuments[fileIdx] = pdfJsDoc;
@@ -243,7 +278,7 @@ async function renderGrid() {
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
         applyCardRotation(card, item.rotation);
 
-        if (currentMode !== 'merge') {
+        if (currentMode !== 'merge' && currentMode !== 'encrypt') {
             card.addEventListener('click', () => {
                 item.selected = !item.selected;
                 card.classList.toggle('selected', item.selected);
@@ -277,7 +312,6 @@ function applyCardRotation(card, rotation) {
     if (canvas) canvas.style.transform = `rotate(${rotation}deg)`;
 }
 
-// Nút tương tác
 DOM.btnSelectAll.addEventListener('click', () => { pagesData.forEach(p => p.selected = true); renderGrid(); });
 DOM.btnInvert.addEventListener('click', () => { pagesData.forEach(p => p.selected = !p.selected); renderGrid(); });
 DOM.btnActionRotate.addEventListener('click', () => {
@@ -286,79 +320,82 @@ DOM.btnActionRotate.addEventListener('click', () => {
 });
 
 // ==========================================
-// 9. THỰC THI (XUẤT PDF)
+// 9. THỰC THI (XUẤT PDF HOẶC GỬI API MÃ HÓA)
 // ==========================================
 DOM.btnExecute.addEventListener('click', async () => {
     DOM.loadingMsg.innerHTML = `⚡ ${dict[currentLang].msg_processing}`;
     DOM.loadingMsg.style.display = 'block';
     
     try {
-        const newPdf = await PDFDocument.create();
-        let pagesToKeep = [];
-        
-        if (currentMode === 'merge' || currentMode === 'rotate') pagesToKeep = pagesData; 
-        else if (currentMode === 'extract') pagesToKeep = pagesData.filter(p => p.selected);
-        else if (currentMode === 'delete') pagesToKeep = pagesData.filter(p => !p.selected);
-
-        if (pagesToKeep.length === 0) throw new Error(dict[currentLang].alert_no_page);
-
-        for (const item of pagesToKeep) {
-            const sourcePdf = sourcePdfDocuments[item.fileIdx];
-            const copiedPages = await newPdf.copyPages(sourcePdf, [item.pageIdx]);
-            const page = copiedPages[0];
-            if (item.rotation !== 0) page.setRotation(degrees(page.getRotation().angle + item.rotation));
-            newPdf.addPage(page);
+        if (currentMode === 'encrypt') {
+            await processEncryptionViaAPI();
+        } else {
+            await processLocalPDF();
         }
-        
-        const bytes = await newPdf.save();
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `PDF_Tools_${currentMode}_${Date.now()}.pdf`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        
-    } catch (error) { alert(error.message); }
+    } catch (error) { 
+        alert(error.message); 
+    }
+    
     DOM.loadingMsg.style.display = 'none';
 });
 
-// ==========================================
-// 10. XEM TOÀN TRANG (ZOOM MODAL)
-// ==========================================
-async function openZoomModal(index) {
-    currentZoomIndex = index;
-    DOM.zoomModal.classList.add('active');
-    DOM.zoomPageText.innerText = `...`;
+// Hàm xử lý MÃ HÓA gửi qua Backend Node.js
+async function processEncryptionViaAPI() {
+    if (!uploadedFiles || uploadedFiles.length === 0) throw new Error(dict[currentLang].alert_no_file);
     
-    DOM.btnPrevPage.style.display = index > 0 ? 'block' : 'none';
-    DOM.btnNextPage.style.display = index < pagesData.length - 1 ? 'block' : 'none';
+    const formData = new FormData();
+    formData.append('pdfFile', uploadedFiles[0]); // Đính kèm file gốc
+    
+    // Lấy dữ liệu Password và Quyền
+    formData.append('userPassword', document.getElementById('userPassword').value);
+    formData.append('ownerPassword', document.getElementById('ownerPassword').value);
+    formData.append('permPrint', document.getElementById('permPrint').checked);
+    formData.append('permHighResPrint', document.getElementById('permHighResPrint').checked);
+    formData.append('permCopy', document.getElementById('permCopy').checked);
+    formData.append('permModify', document.getElementById('permModify').checked);
+    formData.append('permFillForms', document.getElementById('permFillForms').checked);
+    formData.append('permAnnotate', document.getElementById('permAnnotate').checked);
+    formData.append('permAssemble', document.getElementById('permAssemble').checked);
 
-    try {
-        const item = pagesData[index];
-        const page = await pdfDocuments[item.fileIdx].getPage(item.pageIdx + 1);
-        
-        let viewport = page.getViewport({ scale: 1 });
-        const scale = Math.min((window.innerWidth * 0.85) / viewport.width, (window.innerHeight * 0.85) / viewport.height, 2.5); 
-        viewport = page.getViewport({ scale: scale });
-        
-        const ctx = DOM.zoomCanvas.getContext('2d');
-        DOM.zoomCanvas.width = viewport.width; DOM.zoomCanvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        
-        DOM.zoomPageText.innerText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (${dict[currentLang].page_text} ${item.pageIdx + 1})` : `${dict[currentLang].page_text} ${item.pageIdx + 1}`;
-    } catch (error) {
-        DOM.zoomPageText.innerText = "Error!";
-    }
+    // CHÚ Ý: Đổi đường dẫn thành Domain thật của Backend Node.js khi bạn đẩy web lên mạng
+    const API_URL = 'http://localhost:3000/api/encrypt'; 
+
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) throw new Error(dict[currentLang].alert_api_error);
+
+    // Nhận file bảo mật trả về
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Encrypted_${uploadedFiles[0].name}`;
+    document.body.appendChild(a); 
+    a.click(); 
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
-DOM.btnPrevPage.addEventListener('click', (e) => { e.stopPropagation(); if (currentZoomIndex > 0) openZoomModal(currentZoomIndex - 1); });
-DOM.btnNextPage.addEventListener('click', (e) => { e.stopPropagation(); if (currentZoomIndex < pagesData.length - 1) openZoomModal(currentZoomIndex + 1); });
+// Hàm xử lý các tác vụ khác (Gộp, Tách, Xóa, Xoay) ngay trên trình duyệt
+async function processLocalPDF() {
+    const newPdf = await PDFDocument.create();
+    let pagesToKeep = [];
+    
+    if (currentMode === 'merge' || currentMode === 'rotate') pagesToKeep = pagesData; 
+    else if (currentMode === 'extract') pagesToKeep = pagesData.filter(p => p.selected);
+    else if (currentMode === 'delete') pagesToKeep = pagesData.filter(p => !p.selected);
 
-document.addEventListener('keydown', (e) => {
-    if (!DOM.zoomModal.classList.contains('active')) return;
-    if (e.key === 'ArrowLeft' && currentZoomIndex > 0) openZoomModal(currentZoomIndex - 1);
-    else if (e.key === 'ArrowRight' && currentZoomIndex < pagesData.length - 1) openZoomModal(currentZoomIndex + 1);
-    else if (e.key === 'Escape') DOM.zoomModal.classList.remove('active');
-});
+    if (pagesToKeep.length === 0) throw new Error(dict[currentLang].alert_no_page);
 
-DOM.closeModal.addEventListener('click', () => DOM.zoomModal.classList.remove('active'));
-DOM.zoomModal.addEventListener('click', e => { if (e.target === DOM.zoomModal) DOM.zoomModal.classList.remove('active'); });
+    for (const item of pagesToKeep) {
+        const sourcePdf = sourcePdfDocuments[item.fileIdx];
+        const copiedPages = await newPdf.copyPages(sourcePdf, [item.pageIdx]);
+        const page = copiedPages[0];
+        if (item.rotation !== 0) page.setRotation(degrees(page.getRotation().angle + item.rotation));
+        newPdf.addPage(page);
+    }
+    
+    const bytes
