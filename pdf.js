@@ -14,7 +14,9 @@ let sourcePdfDocuments = [];
 let pagesData = []; 
 let currentZoomIndex = -1;
 let isListView = false; 
-let lastSelectedIndex = -1; 
+
+// Biến hỗ trợ Ctrl+Click chọn nhiều trang
+let lastSelectedIndex = -1;
 
 let currentModalZoom = 1;
 let baseDisplayWidth = 0;
@@ -29,6 +31,7 @@ let historyIndex = -1;
 // ==========================================
 const DOM = {
     uploadTitle: document.getElementById('uploadTitle'),
+    uploadSub: document.getElementById('uploadSub'),
     executeText: document.getElementById('executeText'),
     zoomPageText: document.getElementById('zoomPageText'),
     previewTitle: document.getElementById('previewTitle'),
@@ -110,7 +113,7 @@ zoomWrapper.addEventListener('wheel', (e) => {
     }
 });
 
-// -- Gắn sự kiện đóng nút X trên Modal (Đã sửa lỗi) --
+// Gắn sự kiện đóng nút X trên Modal
 DOM.closeModal.addEventListener('click', () => {
     DOM.zoomModal.classList.remove('active');
 });
@@ -240,7 +243,7 @@ DOM.btnToggleView.addEventListener('click', async () => {
 // ==========================================
 DOM.fileInput.addEventListener('change', e => handleFiles(e.target.files));
 DOM.dropZone.addEventListener('dragover', e => { e.preventDefault(); DOM.dropZone.classList.add('drag-over'); });
-DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('drag-over'); });
+DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('drag-over'));
 DOM.dropZone.addEventListener('drop', e => { e.preventDefault(); DOM.dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
 
 async function handleFiles(files) {
@@ -303,6 +306,7 @@ async function renderGrid() {
         
         const titleText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (Trang ${i + 1})` : `Trang ${i + 1}`;
 
+        // BỌC CANVAS BẰNG THẺ DIV.CANVAS-FRAME ĐỂ XOAY KHUNG NÀY THAY VÌ CANVAS
         card.innerHTML = `
             <div class="selected-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div class="canvas-frame">
@@ -321,9 +325,12 @@ async function renderGrid() {
 
         if (currentMode !== 'merge' && currentMode !== 'encrypt') {
             card.addEventListener('click', (e) => {
+                // Xử lý giữ phím Ctrl để chọn một loạt các trang
                 if (e.ctrlKey && lastSelectedIndex !== -1) {
                     const start = Math.min(lastSelectedIndex, i);
                     const end = Math.max(lastSelectedIndex, i);
+                    
+                    // Lấy trạng thái của trang bắt đầu làm chuẩn
                     const targetState = pagesData[lastSelectedIndex].selected;
                     
                     for (let j = start; j <= end; j++) {
@@ -332,9 +339,10 @@ async function renderGrid() {
                         if (targetCard) targetCard.classList.toggle('selected', targetState);
                     }
                 } else {
+                    // Click thông thường
                     item.selected = !item.selected;
                     card.classList.toggle('selected', item.selected);
-                    lastSelectedIndex = i; 
+                    lastSelectedIndex = i; // Lưu lại vị trí để làm mốc cho Ctrl+Click sau
                 }
                 saveState(); // Lưu trạng thái sau khi Click
             });
