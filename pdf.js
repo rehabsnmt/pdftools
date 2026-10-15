@@ -13,9 +13,8 @@ let pdfDocuments = [];
 let sourcePdfDocuments = [];
 let pagesData = []; 
 let currentZoomIndex = -1;
-let isListView = false; // Biến kiểm tra dạng xem Lưới hay Cuộn Lớn
+let isListView = false; 
 
-// Biến hỗ trợ tính năng Zoom In / Zoom Out Modal
 let currentModalZoom = 1;
 let baseDisplayWidth = 0;
 let baseDisplayHeight = 0;
@@ -58,7 +57,7 @@ const DOM = {
 const zoomWrapper = document.createElement('div');
 zoomWrapper.style.width = '100%';
 zoomWrapper.style.height = '80vh';
-zoomWrapper.style.overflow = 'auto'; // Tạo thanh cuộn khi zoom to
+zoomWrapper.style.overflow = 'auto'; 
 zoomWrapper.style.textAlign = 'center';
 DOM.zoomCanvas.parentNode.insertBefore(zoomWrapper, DOM.zoomCanvas);
 zoomWrapper.appendChild(DOM.zoomCanvas);
@@ -70,18 +69,17 @@ zoomControls.style.marginTop = '15px';
 zoomControls.style.zIndex = '1001';
 
 const btnZoomOut = document.createElement('button');
-btnZoomOut.innerText = '➖';
-btnZoomOut.style.cssText = 'background: #fff; border: none; font-size: 1.2rem; padding: 5px 15px; border-radius: 6px; cursor: pointer;';
+btnZoomOut.innerText = '[ - ]';
+btnZoomOut.style.cssText = 'background: #E8E8E8; border: 2px solid #000; font-size: 1.2rem; font-weight: bold; padding: 5px 15px; cursor: pointer;';
 
 const btnZoomIn = document.createElement('button');
-btnZoomIn.innerText = '➕';
-btnZoomIn.style.cssText = 'background: #fff; border: none; font-size: 1.2rem; padding: 5px 15px; border-radius: 6px; cursor: pointer;';
+btnZoomIn.innerText = '[ + ]';
+btnZoomIn.style.cssText = 'background: #E8E8E8; border: 2px solid #000; font-size: 1.2rem; font-weight: bold; padding: 5px 15px; cursor: pointer;';
 
 zoomControls.appendChild(btnZoomOut);
 zoomControls.appendChild(btnZoomIn);
 DOM.zoomModal.appendChild(zoomControls);
 
-// Hàm áp dụng tỷ lệ Zoom lên Canvas Modal
 function applyZoom() {
     DOM.zoomCanvas.style.width = `${baseDisplayWidth * currentModalZoom}px`;
     DOM.zoomCanvas.style.height = `${baseDisplayHeight * currentModalZoom}px`;
@@ -130,7 +128,7 @@ function setupWorkspaceUI() {
     const isEncrypt = currentMode === 'encrypt';
     
     DOM.fileInput.multiple = isMerge;
-    DOM.uploadTitle.innerText = isMerge ? 'Kéo thả nhiều file PDF vào đây' : 'Kéo thả 1 file PDF vào đây';
+    DOM.uploadTitle.innerText = isMerge ? 'KÉO THẢ NHIỀU FILE VÀO ĐÂY' : 'KÉO THẢ 1 FILE VÀO ĐÂY';
     
     let subKey = 'Để chọn các trang cần xử lý';
     if (isMerge) subKey = 'Kéo thả để đổi vị trí các trang';
@@ -147,12 +145,12 @@ function setupWorkspaceUI() {
         DOM.encryptOptions.style.display = isEncrypt ? 'block' : 'none';
     }
 
-    let execText = 'Thực Thi';
-    if (currentMode === 'merge') execText = 'Xuất File Đã Gộp';
-    else if (currentMode === 'extract') execText = 'Trích Xuất File';
-    else if (currentMode === 'delete') execText = 'Xóa & Xuất File';
-    else if (currentMode === 'rotate') execText = 'Xuất File Đã Xoay';
-    else if (currentMode === 'encrypt') execText = 'Mã Hóa & Xuất File';
+    let execText = 'THỰC THI';
+    if (currentMode === 'merge') execText = 'XUẤT FILE ĐÃ GỘP';
+    else if (currentMode === 'extract') execText = 'TRÍCH XUẤT FILE';
+    else if (currentMode === 'delete') execText = 'XÓA & XUẤT FILE';
+    else if (currentMode === 'rotate') execText = 'XUẤT FILE ĐÃ XOAY';
+    else if (currentMode === 'encrypt') execText = 'MÃ HÓA & XUẤT FILE';
     
     DOM.executeText.innerText = execText;
 }
@@ -166,10 +164,9 @@ function resetToHome() {
     if(document.getElementById('userPassword')) document.getElementById('userPassword').value = '';
     if(document.getElementById('ownerPassword')) document.getElementById('ownerPassword').value = '';
 
-    // Reset chế độ xem về dạng lưới
     isListView = false;
     DOM.previewGrid.className = 'grid-view';
-    DOM.btnToggleView.innerHTML = '📄 Dạng cuộn lớn';
+    DOM.btnToggleView.innerHTML = '[V] XEM CUỘN';
 
     currentMode = '';
     uploadedFiles = []; pdfDocuments = []; sourcePdfDocuments = []; pagesData = [];
@@ -178,19 +175,18 @@ function resetToHome() {
 DOM.btnBackHome.addEventListener('click', resetToHome);
 DOM.btnCancel.addEventListener('click', resetToHome);
 
-// CHUYỂN ĐỔI CHẾ ĐỘ XEM
 DOM.btnToggleView.addEventListener('click', async () => {
     isListView = !isListView;
     
     if (isListView) {
         DOM.previewGrid.className = 'list-view';
-        DOM.btnToggleView.innerHTML = '🔲 Dạng lưới nhỏ';
+        DOM.btnToggleView.innerHTML = '[G] XEM LƯỚI';
     } else {
         DOM.previewGrid.className = 'grid-view';
-        DOM.btnToggleView.innerHTML = '📄 Dạng cuộn lớn';
+        DOM.btnToggleView.innerHTML = '[V] XEM CUỘN';
     }
     
-    // Tải lại lưới (để canvas render ở độ phân giải lớn hơn cho sắc nét)
+    DOM.loadingMsg.innerHTML = `VUI LÒNG ĐỢI...`;
     DOM.loadingMsg.style.display = 'block';
     DOM.previewGrid.innerHTML = '';
     await renderGrid();
@@ -219,7 +215,7 @@ async function handleFiles(files) {
     DOM.uploadScreen.style.display = 'none';
     DOM.workspaceScreen.style.display = 'flex';
     
-    DOM.loadingMsg.innerHTML = `⚡ Đang tải bản xem trước...`;
+    DOM.loadingMsg.innerHTML = `ĐANG TẢI BẢN XEM TRƯỚC...`;
     DOM.loadingMsg.style.display = 'block';
     DOM.previewGrid.innerHTML = '';
     
@@ -253,7 +249,6 @@ async function renderGrid() {
         const item = pagesData[i];
         const page = await pdfDocuments[item.fileIdx].getPage(item.pageIdx + 1);
         
-        // Render nét căng nếu đang ở dạng cuộn lớn (isListView = true)
         const renderScale = isListView ? 1.5 : 0.4;
         const viewport = page.getViewport({ scale: renderScale });
         
@@ -267,11 +262,14 @@ async function renderGrid() {
             ? `${uploadedFiles[item.fileIdx].name} (Trang ${i + 1})` 
             : `Trang ${i + 1}`;
 
+        // THAY ĐỔI LỚN NHẤT: BỌC CANVAS BẰNG THẺ DIV.CANVAS-FRAME ĐỂ XOAY KHUNG NÀY THAY VÌ CANVAS
         card.innerHTML = `
-            <div class="selected-badge">✓</div>
-            <canvas></canvas>
-            <div class="page-number" style="color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${titleText}</div>
-            <button class="zoom-btn" title="Zoom">🔍</button>
+            <div class="selected-badge">[X]</div>
+            <div class="canvas-frame">
+                <canvas></canvas>
+            </div>
+            <div class="page-number" title="${titleText}">${titleText}</div>
+            <button class="zoom-btn">[ Z ]</button>
         `;
         
         const canvas = card.querySelector('canvas');
@@ -308,8 +306,9 @@ async function renderGrid() {
 }
 
 function applyCardRotation(card, rotation) {
-    const canvas = card.querySelector('canvas');
-    if (canvas) canvas.style.transform = `rotate(${rotation}deg)`;
+    // SỬA ĐỔI: Nhắm mục tiêu vào .canvas-frame để xoay toàn bộ viền chứa ảnh
+    const frame = card.querySelector('.canvas-frame');
+    if (frame) frame.style.transform = `rotate(${rotation}deg)`;
 }
 
 DOM.btnSelectAll.addEventListener('click', () => { pagesData.forEach(p => p.selected = true); renderGrid(); });
@@ -323,7 +322,7 @@ DOM.btnActionRotate.addEventListener('click', () => {
 // 7. THỰC THI (XUẤT PDF HOẶC GỬI API MÃ HÓA)
 // ==========================================
 DOM.btnExecute.addEventListener('click', async () => {
-    DOM.loadingMsg.innerHTML = `⚡ Đang xử lý...`;
+    DOM.loadingMsg.innerHTML = `ĐANG XỬ LÝ...`;
     DOM.loadingMsg.style.display = 'block';
     
     try {
