@@ -62,7 +62,7 @@
         .mode-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #000; }
         .mode-desc { font-size: 0.85rem; color: var(--text-muted); }
 
-        /* BƯỚC 2: MÀN HÌNH UPLOAD (ĐÃ DỜI NÚT QUAY LẠI VÀ CHỈ HIỆN 1 DÒNG CHỮ) */
+        /* BƯỚC 2: MÀN HÌNH UPLOAD */
         #uploadScreen { padding: 2rem; display: none; flex-direction: column; width: 100%; box-sizing: border-box; }
         .upload-area { 
             border: 2px dashed var(--border-color); padding: 6rem 2rem; cursor: pointer; 
@@ -227,6 +227,7 @@
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </span>
                 <span style="font-size: 1.5rem; font-weight: bold; display: block; margin-top: 15px; text-transform: uppercase;" id="uploadTitle">...</span>
+                <span style="color: var(--text-muted); font-size: 0.95rem; margin-top: 5px; display: block;" id="uploadSub">...</span>
                 <input type="file" id="fileInput" accept="application/pdf">
             </label>
         </div>
