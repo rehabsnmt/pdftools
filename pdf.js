@@ -5,7 +5,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const { PDFDocument, degrees } = PDFLib;
 
 // ==========================================
-// 2. KHAI BÁO BIẾN TOÀN CỤC (Đưa lên đầu để chống sập)
+// 2. KHAI BÁO BIẾN TOÀN CỤC
 // ==========================================
 let currentMode = ''; 
 let uploadedFiles = [];
@@ -13,6 +13,11 @@ let pdfDocuments = [];
 let sourcePdfDocuments = [];
 let pagesData = []; 
 let currentZoomIndex = -1;
+
+// Biến hỗ trợ tính năng Zoom In / Zoom Out Modal
+let currentModalZoom = 1;
+let baseDisplayWidth = 0;
+let baseDisplayHeight = 0;
 
 let currentLang = localStorage.getItem('pdf_lang') || 'vi';
 let isDarkMode = localStorage.getItem('pdf_theme') === 'dark';
@@ -90,7 +95,6 @@ const dict = {
         alert_api_error: "Server connection error during encryption!", 
         page_text: "Page",
 
-        // TỪ ĐIỂN PHẦN BẢO MẬT (ENCRYPT)
         enc_title: "Security & Permissions Settings",
         enc_user_pwd: "Open Document Password (User)",
         enc_owner_pwd: "Permissions Password (Owner)",
@@ -106,7 +110,7 @@ const dict = {
 };
 
 // ==========================================
-// 4. KHỞI TẠO DOM
+// 4. KHỞI TẠO DOM & TIÊM HTML GIAO DIỆN ZOOM
 // ==========================================
 const DOM = {
     btnToggleLang: document.getElementById('btnToggleLang'),
@@ -140,6 +144,69 @@ const DOM = {
     btnNextPage: document.getElementById('btnNextPage')
 };
 
+// ------ THIẾT LẬP GIAO DIỆN ZOOM IN/OUT TỰ ĐỘNG ------
+const zoomWrapper = document.createElement('div');
+zoomWrapper.style.width = '100%';
+zoomWrapper.style.height = '80vh';
+zoomWrapper.style.overflow = 'auto'; // Tạo thanh cuộn khi zoom to
+zoomWrapper.style.textAlign = 'center';
+DOM.zoomCanvas.parentNode.insertBefore(zoomWrapper, DOM.zoomCanvas);
+zoomWrapper.appendChild(DOM.zoomCanvas);
+
+const zoomControls = document.createElement('div');
+zoomControls.style.display = 'flex';
+zoomControls.style.gap = '15px';
+zoomControls.style.marginTop = '15px';
+zoomControls.style.zIndex = '1001';
+
+const btnZoomOut = document.createElement('button');
+btnZoomOut.innerText = '➖';
+btnZoomOut.className = 'btn';
+btnZoomOut.style.fontSize = '1.2rem';
+btnZoomOut.style.padding = '5px 15px';
+
+const btnZoomIn = document.createElement('button');
+btnZoomIn.innerText = '➕';
+btnZoomIn.className = 'btn';
+btnZoomIn.style.fontSize = '1.2rem';
+btnZoomIn.style.padding = '5px 15px';
+
+zoomControls.appendChild(btnZoomOut);
+zoomControls.appendChild(btnZoomIn);
+DOM.zoomModal.appendChild(zoomControls);
+
+// Hàm áp dụng tỷ lệ Zoom lên Canvas
+function applyZoom() {
+    DOM.zoomCanvas.style.width = `${baseDisplayWidth * currentModalZoom}px`;
+    DOM.zoomCanvas.style.height = `${baseDisplayHeight * currentModalZoom}px`;
+}
+
+btnZoomIn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (currentModalZoom < 5) {
+        currentModalZoom += 0.25;
+        applyZoom();
+    }
+});
+
+btnZoomOut.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (currentModalZoom > 0.5) {
+        currentModalZoom -= 0.25;
+        applyZoom();
+    }
+});
+
+// Hỗ trợ giữ Ctrl + Lăn chuột để phóng to thu nhỏ
+zoomWrapper.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+        e.preventDefault();
+        if (e.deltaY < 0 && currentModalZoom < 5) currentModalZoom += 0.15;
+        else if (e.deltaY > 0 && currentModalZoom > 0.5) currentModalZoom -= 0.15;
+        applyZoom();
+    }
+});
+
 // ==========================================
 // 5. GIAO DIỆN & NGÔN NGỮ LOGIC
 // ==========================================
@@ -168,7 +235,6 @@ function applyLanguage() {
 DOM.btnToggleTheme.addEventListener('click', () => { isDarkMode = !isDarkMode; applyTheme(); });
 DOM.btnToggleLang.addEventListener('click', () => { currentLang = currentLang === 'vi' ? 'en' : 'vi'; applyLanguage(); });
 
-// Chạy khởi tạo ban đầu
 applyTheme();
 applyLanguage();
 
@@ -191,7 +257,6 @@ function setupWorkspaceUI() {
     
     DOM.fileInput.multiple = isMerge;
     
-    // Cập nhật chữ trên giao diện Upload
     DOM.uploadTitle.innerText = dict[currentLang][isMerge ? 'up_title_multi' : 'up_title_single'];
     
     let subKey = 'up_sub_select';
@@ -200,18 +265,15 @@ function setupWorkspaceUI() {
     else if (currentMode === 'encrypt') subKey = 'up_sub_encrypt';
     DOM.uploadSub.innerText = dict[currentLang][subKey];
 
-    // Bật tắt các nút chức năng (Ẩn khi đang ở chế độ Encrypt)
     const isSelectionMode = ['extract', 'delete', 'rotate'].includes(currentMode);
     DOM.btnSelectAll.style.display = isSelectionMode ? 'block' : 'none';
     DOM.btnInvert.style.display = isSelectionMode ? 'block' : 'none';
     DOM.btnActionRotate.style.display = currentMode === 'rotate' ? 'block' : 'none';
 
-    // Ẩn hiện Bảng cấu hình mã hóa
     if (DOM.encryptOptions) {
         DOM.encryptOptions.style.display = isEncrypt ? 'block' : 'none';
     }
 
-    // Cập nhật tên nút Thực Thi
     DOM.executeText.innerText = dict[currentLang][`exec_${currentMode}`];
 }
 
@@ -221,7 +283,6 @@ function resetToHome() {
     DOM.homeScreen.style.display = 'block';
     DOM.fileInput.value = '';
     
-    // Reset Form Mã hóa
     if(document.getElementById('userPassword')) document.getElementById('userPassword').value = '';
     if(document.getElementById('ownerPassword')) document.getElementById('ownerPassword').value = '';
 
@@ -295,7 +356,10 @@ async function renderGrid() {
         card.dataset.index = i;
         if(item.selected) card.classList.add('selected');
         
-        const titleText = currentMode === 'merge' ? uploadedFiles[item.fileIdx].name : `${dict[currentLang].page_text} ${item.pageIdx + 1}`;
+        // SỬA LỖI ĐÁNH SỐ: Sử dụng i + 1 (vị trí mảng hiện tại) để số trang luôn cập nhật đúng khi kéo thả
+        const titleText = currentMode === 'merge' 
+            ? `${uploadedFiles[item.fileIdx].name} (${dict[currentLang].page_text} ${i + 1})` 
+            : `${dict[currentLang].page_text} ${i + 1}`;
 
         card.innerHTML = `
             <div class="selected-badge">✓</div>
@@ -309,7 +373,6 @@ async function renderGrid() {
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
         applyCardRotation(card, item.rotation);
 
-        // Bỏ qua khả năng click chọn nếu đang gộp hoặc mã hóa
         if (currentMode !== 'merge' && currentMode !== 'encrypt') {
             card.addEventListener('click', () => {
                 item.selected = !item.selected;
@@ -331,7 +394,7 @@ async function renderGrid() {
             if (fromIdx !== toIdx) {
                 const movedPage = pagesData.splice(fromIdx, 1)[0];
                 pagesData.splice(toIdx, 0, movedPage);
-                await renderGrid(); 
+                await renderGrid(); // Rerender sẽ tự đánh lại số thứ tự (i + 1)
             }
         });
 
@@ -376,9 +439,8 @@ async function processEncryptionViaAPI() {
     if (!uploadedFiles || uploadedFiles.length === 0) throw new Error(dict[currentLang].alert_no_file);
     
     const formData = new FormData();
-    formData.append('pdfFile', uploadedFiles[0]); // Đính kèm file gốc
+    formData.append('pdfFile', uploadedFiles[0]); 
     
-    // Lấy dữ liệu Password và Quyền
     formData.append('userPassword', document.getElementById('userPassword').value);
     formData.append('ownerPassword', document.getElementById('ownerPassword').value);
     formData.append('permPrint', document.getElementById('permPrint').checked);
@@ -389,7 +451,6 @@ async function processEncryptionViaAPI() {
     formData.append('permAnnotate', document.getElementById('permAnnotate').checked);
     formData.append('permAssemble', document.getElementById('permAssemble').checked);
 
-    // CHÚ Ý: Đổi thành URL Server backend của bạn khi triển khai thực tế (hoặc URL Ngrok)
     const API_URL = 'http://localhost:3000/api/encrypt'; 
 
     const response = await fetch(API_URL, {
@@ -399,7 +460,6 @@ async function processEncryptionViaAPI() {
 
     if (!response.ok) throw new Error(dict[currentLang].alert_api_error);
 
-    // Nhận file bảo mật trả về và tải xuống
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -411,7 +471,7 @@ async function processEncryptionViaAPI() {
     URL.revokeObjectURL(url);
 }
 
-// Hàm xử lý các tác vụ khác (Gộp, Tách, Xóa, Xoay) ngay trên trình duyệt
+// Hàm xử lý các tác vụ cục bộ (Gộp, Tách, Xóa, Xoay)
 async function processLocalPDF() {
     const newPdf = await PDFDocument.create();
     let pagesToKeep = [];
@@ -454,37 +514,37 @@ async function openZoomModal(index) {
         const item = pagesData[index];
         const page = await pdfDocuments[item.fileIdx].getPage(item.pageIdx + 1);
         
-        // 1. Tính toán tỷ lệ hiển thị trên màn hình (CSS Scale)
+        // Reset hệ số zoom về mặc định khi mở trang mới
+        currentModalZoom = 1;
+        
         let baseViewport = page.getViewport({ scale: 1 });
         const displayScale = Math.min(
             (window.innerWidth * 0.85) / baseViewport.width, 
             (window.innerHeight * 0.85) / baseViewport.height, 
-            2.5 // Giới hạn zoom tối đa
+            2.5 
         );
         
-        // 2. Lấy mật độ điểm ảnh của thiết bị (Retina thường là 2 hoặc 3)
-        // Nhân thêm 1.5 để ép độ nét lên mức tối đa
-        const pixelRatio = (window.devicePixelRatio || 1) * 1.5; 
+        const pixelRatio = (window.devicePixelRatio || 1) * 2; // Nhân hệ số để siêu nét
         const renderScale = displayScale * pixelRatio; 
         
-        // 3. Tạo 2 Viewport: 1 để vẽ (chất lượng cực cao) và 1 để hiển thị (kích thước thật)
         const renderViewport = page.getViewport({ scale: renderScale });
         const displayViewport = page.getViewport({ scale: displayScale });
         
         const ctx = DOM.zoomCanvas.getContext('2d');
         
-        // Cài đặt kích thước độ phân giải nội tại của Canvas (Rất to)
         DOM.zoomCanvas.width = renderViewport.width; 
         DOM.zoomCanvas.height = renderViewport.height;
         
-        // Cài đặt kích thước hiển thị trên màn hình bằng CSS (Thu nhỏ lại để vừa màn hình)
-        DOM.zoomCanvas.style.width = `${displayViewport.width}px`;
-        DOM.zoomCanvas.style.height = `${displayViewport.height}px`;
+        baseDisplayWidth = displayViewport.width;
+        baseDisplayHeight = displayViewport.height;
+        applyZoom(); // Áp dụng kích thước ban đầu bằng CSS
 
-        // Vẽ PDF lên Canvas với độ phân giải siêu cao
         await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
         
-        DOM.zoomPageText.innerText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (${dict[currentLang].page_text} ${item.pageIdx + 1})` : `${dict[currentLang].page_text} ${item.pageIdx + 1}`;
+        // Đánh lại số thứ tự (index + 1) để khớp với Grid khi kéo thả
+        DOM.zoomPageText.innerText = currentMode === 'merge' 
+            ? `${uploadedFiles[item.fileIdx].name} (${dict[currentLang].page_text} ${index + 1})` 
+            : `${dict[currentLang].page_text} ${index + 1}`;
     } catch (error) {
         console.error(error);
         DOM.zoomPageText.innerText = "Error!";
@@ -501,5 +561,9 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'Escape') DOM.zoomModal.classList.remove('active');
 });
 
-DOM.closeModal.addEventListener('click', () => DOM.zoomModal.classList.remove('active'));
-DOM.zoomModal.addEventListener('click', e => { if (e.target === DOM.zoomModal) DOM.zoomModal.classList.remove('active'); });
+// Click ra ngoài (nhưng không phải vào canvas hay nút zoom) để đóng modal
+DOM.zoomModal.addEventListener('click', e => { 
+    if (e.target === DOM.zoomModal || e.target === zoomWrapper) {
+        DOM.zoomModal.classList.remove('active'); 
+    }
+});
