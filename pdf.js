@@ -5,7 +5,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const { PDFDocument, degrees } = PDFLib;
 
 // ==========================================
-// 2. KHAI BÁO BIẾN TOÀN CỤC
+// 2. KHAI BÁO BIẾN TOÀN CỤC & TRẠNG THÁI LỊCH SỬ (UNDO/REDO)
 // ==========================================
 let currentMode = ''; 
 let uploadedFiles = [];
@@ -14,22 +14,24 @@ let sourcePdfDocuments = [];
 let pagesData = []; 
 let currentZoomIndex = -1;
 let isListView = false; 
-
-// Biến hỗ trợ Ctrl+Click chọn nhiều trang
-let lastSelectedIndex = -1;
+let lastSelectedIndex = -1; 
 
 let currentModalZoom = 1;
 let baseDisplayWidth = 0;
 let baseDisplayHeight = 0;
 
+// Undo & Redo System
+let historyStates = [];
+let historyIndex = -1;
+
 // ==========================================
-// 3. KHỞI TẠO DOM & TIÊM HTML GIAO DIỆN ZOOM
+// 3. KHỞI TẠO DOM & GIAO DIỆN ZOOM
 // ==========================================
 const DOM = {
     uploadTitle: document.getElementById('uploadTitle'),
-    uploadSub: document.getElementById('uploadSub'),
     executeText: document.getElementById('executeText'),
     zoomPageText: document.getElementById('zoomPageText'),
+    previewTitle: document.getElementById('previewTitle'),
     
     homeScreen: document.getElementById('homeScreen'),
     uploadScreen: document.getElementById('uploadScreen'),
@@ -49,6 +51,9 @@ const DOM = {
     btnActionRotate: document.getElementById('btnActionRotate'),
     btnToggleView: document.getElementById('btnToggleView'),
 
+    btnUndo: document.getElementById('btnUndo'),
+    btnRedo: document.getElementById('btnRedo'),
+
     zoomModal: document.getElementById('zoomModal'),
     zoomCanvas: document.getElementById('zoomCanvas'),
     closeModal: document.getElementById('closeModal'),
@@ -56,7 +61,7 @@ const DOM = {
     btnNextPage: document.getElementById('btnNextPage')
 };
 
-// ------ THIẾT LẬP GIAO DIỆN ZOOM IN/OUT TỰ ĐỘNG ------
+// -- Giao diện Zoom In/Out --
 const zoomWrapper = document.createElement('div');
 zoomWrapper.style.width = '100%';
 zoomWrapper.style.height = '80vh';
@@ -90,20 +95,12 @@ function applyZoom() {
 
 btnZoomIn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (currentModalZoom < 5) {
-        currentModalZoom += 0.25;
-        applyZoom();
-    }
+    if (currentModalZoom < 5) { currentModalZoom += 0.25; applyZoom(); }
 });
-
 btnZoomOut.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (currentModalZoom > 0.5) {
-        currentModalZoom -= 0.25;
-        applyZoom();
-    }
+    if (currentModalZoom > 0.5) { currentModalZoom -= 0.25; applyZoom(); }
 });
-
 zoomWrapper.addEventListener('wheel', (e) => {
     if (e.ctrlKey) {
         e.preventDefault();
@@ -113,14 +110,61 @@ zoomWrapper.addEventListener('wheel', (e) => {
     }
 });
 
+// -- Gắn sự kiện đóng nút X trên Modal (Đã sửa lỗi) --
+DOM.closeModal.addEventListener('click', () => {
+    DOM.zoomModal.classList.remove('active');
+});
+
 // ==========================================
-// 4. CHỌN TÍNH NĂNG VÀ QUẢN LÝ LUỒNG
+// 4. HỆ THỐNG UNDO / REDO
+// ==========================================
+function saveState() {
+    if (historyIndex < historyStates.length - 1) {
+        historyStates = historyStates.slice(0, historyIndex + 1);
+    }
+    historyStates.push(pagesData.map(p => ({...p})));
+    historyIndex++;
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (historyIndex > 0) {
+        historyIndex--;
+        pagesData = historyStates[historyIndex].map(p => ({...p}));
+        renderGrid();
+        updateUndoRedoButtons();
+    }
+}
+
+function redo() {
+    if (historyIndex < historyStates.length - 1) {
+        historyIndex++;
+        pagesData = historyStates[historyIndex].map(p => ({...p}));
+        renderGrid();
+        updateUndoRedoButtons();
+    }
+}
+
+function updateUndoRedoButtons() {
+    DOM.btnUndo.disabled = historyIndex <= 0;
+    DOM.btnRedo.disabled = historyIndex >= historyStates.length - 1;
+    DOM.btnUndo.style.opacity = DOM.btnUndo.disabled ? '0.5' : '1';
+    DOM.btnUndo.style.cursor = DOM.btnUndo.disabled ? 'not-allowed' : 'pointer';
+    DOM.btnRedo.style.opacity = DOM.btnRedo.disabled ? '0.5' : '1';
+    DOM.btnRedo.style.cursor = DOM.btnRedo.disabled ? 'not-allowed' : 'pointer';
+}
+
+DOM.btnUndo.addEventListener('click', undo);
+DOM.btnRedo.addEventListener('click', redo);
+
+// ==========================================
+// 5. CHỌN TÍNH NĂNG VÀ QUẢN LÝ LUỒNG
 // ==========================================
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', () => {
         currentMode = card.dataset.mode;
         DOM.homeScreen.style.display = 'none';
-        DOM.uploadScreen.style.display = 'block';
+        DOM.uploadScreen.style.display = 'flex';
         setupWorkspaceUI(); 
     });
 });
@@ -131,18 +175,16 @@ function setupWorkspaceUI() {
     const isEncrypt = currentMode === 'encrypt';
     
     DOM.fileInput.multiple = isMerge;
-    DOM.uploadTitle.innerText = isMerge ? 'KÉO THẢ NHIỀU FILE VÀO ĐÂY' : 'KÉO THẢ 1 FILE VÀO ĐÂY';
-    
-    let subKey = 'Giữ phím Ctrl và Click để chọn nhanh nhiều trang';
-    if (isMerge) subKey = 'Kéo thả để đổi vị trí các trang';
-    else if (currentMode === 'rotate') subKey = 'Nhấp vào trang để chọn, sau đó bấm nút Xoay 90°';
-    else if (currentMode === 'encrypt') subKey = 'Điền thông tin mật khẩu ở bảng bên dưới';
-    DOM.uploadSub.innerText = subKey;
+    DOM.uploadTitle.innerText = isMerge ? 'KÉO THẢ NHIỀU FILE PDF VÀO ĐÂY' : 'KÉO THẢ FILE PDF VÀO ĐÂY';
 
     const isSelectionMode = ['extract', 'delete', 'rotate'].includes(currentMode);
     DOM.btnSelectAll.style.display = isSelectionMode ? 'flex' : 'none';
     DOM.btnInvert.style.display = isSelectionMode ? 'flex' : 'none';
     DOM.btnActionRotate.style.display = currentMode === 'rotate' ? 'flex' : 'none';
+    
+    const showUndoRedo = currentMode !== 'encrypt';
+    DOM.btnUndo.style.display = showUndoRedo ? 'flex' : 'none';
+    DOM.btnRedo.style.display = showUndoRedo ? 'flex' : 'none';
 
     if (DOM.encryptOptions) {
         DOM.encryptOptions.style.display = isEncrypt ? 'block' : 'none';
@@ -154,7 +196,6 @@ function setupWorkspaceUI() {
     else if (currentMode === 'delete') execText = 'XÓA & XUẤT FILE';
     else if (currentMode === 'rotate') execText = 'XUẤT FILE ĐÃ XOAY';
     else if (currentMode === 'encrypt') execText = 'MÃ HÓA & XUẤT FILE';
-    
     DOM.executeText.innerText = execText;
 }
 
@@ -173,7 +214,7 @@ function resetToHome() {
 
     currentMode = '';
     uploadedFiles = []; pdfDocuments = []; sourcePdfDocuments = []; pagesData = [];
-    lastSelectedIndex = -1; // Reset selection index
+    historyStates = []; historyIndex = -1; lastSelectedIndex = -1;
 }
 
 DOM.btnBackHome.addEventListener('click', resetToHome);
@@ -181,7 +222,6 @@ DOM.btnCancel.addEventListener('click', resetToHome);
 
 DOM.btnToggleView.addEventListener('click', async () => {
     isListView = !isListView;
-    
     if (isListView) {
         DOM.previewGrid.className = 'list-view';
         DOM.btnToggleView.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> XEM LƯỚI';
@@ -189,8 +229,6 @@ DOM.btnToggleView.addEventListener('click', async () => {
         DOM.previewGrid.className = 'grid-view';
         DOM.btnToggleView.innerHTML = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> XEM CUỘN';
     }
-    
-    DOM.loadingMsg.innerHTML = `VUI LÒNG ĐỢI...`;
     DOM.loadingMsg.style.display = 'block';
     DOM.previewGrid.innerHTML = '';
     await renderGrid();
@@ -198,11 +236,11 @@ DOM.btnToggleView.addEventListener('click', async () => {
 });
 
 // ==========================================
-// 5. XỬ LÝ UPLOAD FILE
+// 6. XỬ LÝ UPLOAD FILE
 // ==========================================
 DOM.fileInput.addEventListener('change', e => handleFiles(e.target.files));
 DOM.dropZone.addEventListener('dragover', e => { e.preventDefault(); DOM.dropZone.classList.add('drag-over'); });
-DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('drag-over'));
+DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('drag-over'); });
 DOM.dropZone.addEventListener('drop', e => { e.preventDefault(); DOM.dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
 
 async function handleFiles(files) {
@@ -210,24 +248,23 @@ async function handleFiles(files) {
     if (validFiles.length === 0) return alert('Vui lòng chọn file PDF!');
     if (currentMode === 'merge' && validFiles.length < 2) return alert('Vui lòng chọn từ 2 file trở lên để Gộp!');
 
-    pagesData = []; 
-    pdfDocuments = []; 
-    sourcePdfDocuments = [];
-    lastSelectedIndex = -1; // Reset selection index on new file
+    pagesData = []; pdfDocuments = []; sourcePdfDocuments = [];
+    historyStates = []; historyIndex = -1; lastSelectedIndex = -1;
 
     uploadedFiles = currentMode === 'merge' ? validFiles : [validFiles[0]];
     
+    // Gán tên file vào Header Preview
+    const fileNamesStr = uploadedFiles.map(f => f.name).join(', ');
+    DOM.previewTitle.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> ${fileNamesStr}`;
+
     DOM.uploadScreen.style.display = 'none';
     DOM.workspaceScreen.style.display = 'flex';
-    
-    DOM.loadingMsg.innerHTML = `ĐANG TẢI BẢN XEM TRƯỚC...`;
     DOM.loadingMsg.style.display = 'block';
     DOM.previewGrid.innerHTML = '';
     
     try {
         for (let fileIdx = 0; fileIdx < uploadedFiles.length; fileIdx++) {
             const buffer = await uploadedFiles[fileIdx].arrayBuffer();
-            
             sourcePdfDocuments[fileIdx] = await PDFDocument.load(buffer.slice(0));
             const pdfJsDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
             pdfDocuments[fileIdx] = pdfJsDoc;
@@ -236,6 +273,7 @@ async function handleFiles(files) {
                 pagesData.push({ fileIdx, pageIdx, selected: false, rotation: 0 });
             }
         }
+        saveState(); // Lưu trạng thái gốc vào Undo/Redo
         await renderGrid();
     } catch (error) {
         alert("Lỗi tải file: " + error.message);
@@ -245,7 +283,7 @@ async function handleFiles(files) {
 }
 
 // ==========================================
-// 6. RENDER GRID VÀ KÉO THẢ (VỚI TÍNH NĂNG CTRL+CLICK)
+// 7. RENDER GRID VÀ KÉO THẢ (VỚI TÍNH NĂNG CTRL+CLICK)
 // ==========================================
 async function renderGrid() {
     DOM.previewGrid.innerHTML = '';
@@ -263,11 +301,8 @@ async function renderGrid() {
         card.dataset.index = i;
         if(item.selected) card.classList.add('selected');
         
-        const titleText = currentMode === 'merge' 
-            ? `${uploadedFiles[item.fileIdx].name} (Trang ${i + 1})` 
-            : `Trang ${i + 1}`;
+        const titleText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (Trang ${i + 1})` : `Trang ${i + 1}`;
 
-        // BỌC CANVAS BẰNG THẺ DIV.CANVAS-FRAME ĐỂ XOAY KHUNG NÀY THAY VÌ CANVAS
         card.innerHTML = `
             <div class="selected-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div class="canvas-frame">
@@ -286,12 +321,9 @@ async function renderGrid() {
 
         if (currentMode !== 'merge' && currentMode !== 'encrypt') {
             card.addEventListener('click', (e) => {
-                // Xử lý giữ phím Ctrl để chọn một loạt các trang
                 if (e.ctrlKey && lastSelectedIndex !== -1) {
                     const start = Math.min(lastSelectedIndex, i);
                     const end = Math.max(lastSelectedIndex, i);
-                    
-                    // Lấy trạng thái của trang bắt đầu làm chuẩn
                     const targetState = pagesData[lastSelectedIndex].selected;
                     
                     for (let j = start; j <= end; j++) {
@@ -300,11 +332,11 @@ async function renderGrid() {
                         if (targetCard) targetCard.classList.toggle('selected', targetState);
                     }
                 } else {
-                    // Click thông thường
                     item.selected = !item.selected;
                     card.classList.toggle('selected', item.selected);
-                    lastSelectedIndex = i; // Lưu lại vị trí để làm mốc cho Ctrl+Click sau
+                    lastSelectedIndex = i; 
                 }
+                saveState(); // Lưu trạng thái sau khi Click
             });
         }
 
@@ -321,7 +353,8 @@ async function renderGrid() {
             if (fromIdx !== toIdx) {
                 const movedPage = pagesData.splice(fromIdx, 1)[0];
                 pagesData.splice(toIdx, 0, movedPage);
-                lastSelectedIndex = -1; // Xóa mốc chọn khi thay đổi vị trí
+                lastSelectedIndex = -1; 
+                saveState(); // Lưu trạng thái sau khi Kéo thả
                 await renderGrid(); 
             }
         });
@@ -338,6 +371,7 @@ function applyCardRotation(card, rotation) {
 DOM.btnSelectAll.addEventListener('click', () => { 
     pagesData.forEach(p => p.selected = true); 
     Array.from(DOM.previewGrid.children).forEach(card => card.classList.add('selected'));
+    saveState();
 });
 DOM.btnInvert.addEventListener('click', () => { 
     pagesData.forEach((p, i) => {
@@ -345,6 +379,7 @@ DOM.btnInvert.addEventListener('click', () => {
         const card = DOM.previewGrid.querySelector(`.page-card[data-index="${i}"]`);
         if (card) card.classList.toggle('selected', p.selected);
     });
+    saveState();
 });
 DOM.btnActionRotate.addEventListener('click', () => {
     pagesData.forEach((p, i) => { 
@@ -354,34 +389,32 @@ DOM.btnActionRotate.addEventListener('click', () => {
             if (card) applyCardRotation(card, p.rotation);
         }
     });
+    saveState();
+});
+
+// Phím tắt bàn phím Undo/Redo
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+    if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
 });
 
 // ==========================================
-// 7. THỰC THI (XUẤT PDF HOẶC GỬI API MÃ HÓA)
+// 8. THỰC THI (XUẤT PDF HOẶC GỬI API MÃ HÓA)
 // ==========================================
 DOM.btnExecute.addEventListener('click', async () => {
-    DOM.loadingMsg.innerHTML = `ĐANG XỬ LÝ...`;
     DOM.loadingMsg.style.display = 'block';
-    
     try {
-        if (currentMode === 'encrypt') {
-            await processEncryptionViaAPI();
-        } else {
-            await processLocalPDF();
-        }
-    } catch (error) { 
-        alert(error.message); 
-    }
-    
+        if (currentMode === 'encrypt') { await processEncryptionViaAPI(); } 
+        else { await processLocalPDF(); }
+    } catch (error) { alert(error.message); }
     DOM.loadingMsg.style.display = 'none';
 });
 
 async function processEncryptionViaAPI() {
     if (!uploadedFiles || uploadedFiles.length === 0) throw new Error('Vui lòng chọn file PDF!');
-    
     const formData = new FormData();
     formData.append('pdfFile', uploadedFiles[0]); 
-    
     formData.append('userPassword', document.getElementById('userPassword').value);
     formData.append('ownerPassword', document.getElementById('ownerPassword').value);
     formData.append('permPrint', document.getElementById('permPrint').checked);
@@ -393,12 +426,7 @@ async function processEncryptionViaAPI() {
     formData.append('permAssemble', document.getElementById('permAssemble').checked);
 
     const API_URL = 'http://localhost:3000/api/encrypt'; 
-
-    const response = await fetch(API_URL, {
-        method: 'POST',
-        body: formData
-    });
-
+    const response = await fetch(API_URL, { method: 'POST', body: formData });
     if (!response.ok) throw new Error('Lỗi kết nối máy chủ mã hóa!');
 
     const blob = await response.blob();
@@ -406,16 +434,13 @@ async function processEncryptionViaAPI() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `Encrypted_${uploadedFiles[0].name}`;
-    document.body.appendChild(a); 
-    a.click(); 
-    document.body.removeChild(a);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 
 async function processLocalPDF() {
     const newPdf = await PDFDocument.create();
     let pagesToKeep = [];
-    
     if (currentMode === 'merge' || currentMode === 'rotate') pagesToKeep = pagesData; 
     else if (currentMode === 'extract') pagesToKeep = pagesData.filter(p => p.selected);
     else if (currentMode === 'delete') pagesToKeep = pagesData.filter(p => !p.selected);
@@ -429,7 +454,6 @@ async function processLocalPDF() {
         if (item.rotation !== 0) page.setRotation(degrees(page.getRotation().angle + item.rotation));
         newPdf.addPage(page);
     }
-    
     const bytes = await newPdf.save();
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
@@ -440,7 +464,7 @@ async function processLocalPDF() {
 }
 
 // ==========================================
-// 8. XEM TOÀN TRANG (ZOOM MODAL)
+// 9. XEM TOÀN TRANG (ZOOM MODAL)
 // ==========================================
 async function openZoomModal(index) {
     currentZoomIndex = index;
@@ -457,32 +481,23 @@ async function openZoomModal(index) {
         currentModalZoom = 1;
         
         let baseViewport = page.getViewport({ scale: 1 });
-        const displayScale = Math.min(
-            (window.innerWidth * 0.85) / baseViewport.width, 
-            (window.innerHeight * 0.85) / baseViewport.height, 
-            2.5 
-        );
-        
+        const displayScale = Math.min((window.innerWidth * 0.85) / baseViewport.width, (window.innerHeight * 0.85) / baseViewport.height, 2.5);
         const pixelRatio = (window.devicePixelRatio || 1) * 2; 
         const renderScale = displayScale * pixelRatio; 
         
         const renderViewport = page.getViewport({ scale: renderScale });
         const displayViewport = page.getViewport({ scale: displayScale });
-        
         const ctx = DOM.zoomCanvas.getContext('2d');
         
         DOM.zoomCanvas.width = renderViewport.width; 
         DOM.zoomCanvas.height = renderViewport.height;
-        
         baseDisplayWidth = displayViewport.width;
         baseDisplayHeight = displayViewport.height;
         applyZoom(); 
 
         await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
         
-        DOM.zoomPageText.innerText = currentMode === 'merge' 
-            ? `${uploadedFiles[item.fileIdx].name} (Trang ${index + 1})` 
-            : `Trang ${index + 1}`;
+        DOM.zoomPageText.innerText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (Trang ${index + 1})` : `Trang ${index + 1}`;
     } catch (error) {
         console.error(error);
         DOM.zoomPageText.innerText = "Error!";
@@ -491,16 +506,12 @@ async function openZoomModal(index) {
 
 DOM.btnPrevPage.addEventListener('click', (e) => { e.stopPropagation(); if (currentZoomIndex > 0) openZoomModal(currentZoomIndex - 1); });
 DOM.btnNextPage.addEventListener('click', (e) => { e.stopPropagation(); if (currentZoomIndex < pagesData.length - 1) openZoomModal(currentZoomIndex + 1); });
-
 document.addEventListener('keydown', (e) => {
     if (!DOM.zoomModal.classList.contains('active')) return;
     if (e.key === 'ArrowLeft' && currentZoomIndex > 0) openZoomModal(currentZoomIndex - 1);
     else if (e.key === 'ArrowRight' && currentZoomIndex < pagesData.length - 1) openZoomModal(currentZoomIndex + 1);
     else if (e.key === 'Escape') DOM.zoomModal.classList.remove('active');
 });
-
 DOM.zoomModal.addEventListener('click', e => { 
-    if (e.target === DOM.zoomModal || e.target === zoomWrapper) {
-        DOM.zoomModal.classList.remove('active'); 
-    }
+    if (e.target === DOM.zoomModal || e.target === zoomWrapper) DOM.zoomModal.classList.remove('active'); 
 });
