@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Tools - Modern Flat</title>
+    <title>Công cụ PDF - Modern Flat</title>
     
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -62,11 +62,11 @@
         .mode-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #000; }
         .mode-desc { font-size: 0.85rem; color: var(--text-muted); }
 
-        /* BƯỚC 2: MÀN HÌNH UPLOAD */
-        #uploadScreen { padding: 4rem 2rem; text-align: center; display: none; }
+        /* BƯỚC 2: MÀN HÌNH UPLOAD (ĐÃ DỜI NÚT QUAY LẠI VÀ CHỈ HIỆN 1 DÒNG CHỮ) */
+        #uploadScreen { padding: 2rem; display: none; flex-direction: column; width: 100%; box-sizing: border-box; }
         .upload-area { 
-            border: 2px dashed var(--border-color); padding: 4rem 2rem; cursor: pointer; 
-            display: flex; flex-direction: column; align-items: center; background: var(--bg-color); 
+            border: 2px dashed var(--border-color); padding: 6rem 2rem; cursor: pointer; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-color); width: 100%; box-sizing: border-box;
         }
         .upload-area:hover { background: var(--accent-color); border: 2px solid var(--border-color); }
         .upload-area input { display: none; }
@@ -80,12 +80,12 @@
             display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; justify-content: center;
         }
         .btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round;}
-        .btn:hover { background: #CCCCCC; }
-        .btn:active { background: #000; color: #FFF; }
+        .btn:hover:not(:disabled) { background: #CCCCCC; }
+        .btn:active:not(:disabled) { background: #000; color: #FFF; }
         
         .btn-primary { background: var(--accent-color); color: #000; }
-        .btn-primary:hover { background: #DAA520; }
-        .btn-primary:active { background: #000; color: var(--accent-color); }
+        .btn-primary:hover:not(:disabled) { background: #DAA520; }
+        .btn-primary:active:not(:disabled) { background: #000; color: var(--accent-color); }
 
         /* THANH CÔNG CỤ NỔI BÊN PHẢI */
         .floating-toolbar {
@@ -124,7 +124,7 @@
             display: flex; justify-content: space-between; align-items: center; 
             padding: 15px 2rem; border-bottom: 2px solid var(--border-color); background: #F5F5F5;
         }
-        .preview-header h3 { margin: 0; font-size: 1.1rem; text-transform: uppercase; display: flex; align-items: center; gap: 8px;}
+        .preview-header h3 { margin: 0; font-size: 1.1rem; text-transform: uppercase; display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 
         /* KHU VỰC PREVIEW GRID */
         #previewGrid { padding: 2rem; background: var(--card-bg); max-height: 65vh; overflow-y: scroll; }
@@ -154,7 +154,7 @@
         /* MODAL ZOOM NỀN XÁM */
         #zoomModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(220,220,220,0.95); justify-content: center; align-items: center; flex-direction: column; }
         #zoomModal.active { display: flex; }
-        #closeModal { position: absolute; top: 15px; right: 25px; color: #000; font-size: 30px; cursor: pointer; font-weight: bold; }
+        #closeModal { position: absolute; top: 15px; right: 25px; color: #000; cursor: pointer; z-index: 10001; }
         .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: var(--accent-color); color: #000; border: 2px solid #000; font-size: 1.5rem; padding: 5px 15px; cursor: pointer; font-weight: bold;}
         .nav-btn:hover { background: #000; color: var(--accent-color); }
         #btnPrevPage { left: 20px; } #btnNextPage { right: 20px; }
@@ -167,7 +167,7 @@
     <div class="header">
         <h1 class="app-logo">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            PDF TOOLS
+            CÔNG CỤ PDF
         </h1>
     </div>
 
@@ -217,15 +217,16 @@
 
         <!-- BƯỚC 2: UPLOAD -->
         <div id="uploadScreen">
-            <button class="btn" id="btnBackHome" style="margin-bottom: 20px;">
-                <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> QUAY LẠI
-            </button>
+            <div style="width: 100%; display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button class="btn" id="btnBackHome">
+                    <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> QUAY LẠI
+                </button>
+            </div>
             <label class="upload-area" id="dropZone">
                 <span class="upload-icon" style="color: #000;">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </span>
-                <span style="font-size: 1.3rem; font-weight: bold; display: block; margin-top: 15px; text-transform: uppercase;" id="uploadTitle">...</span>
-                <span style="color: var(--text-muted); font-size: 0.95rem; margin-top: 5px; display: block;" id="uploadSub">...</span>
+                <span style="font-size: 1.5rem; font-weight: bold; display: block; margin-top: 15px; text-transform: uppercase;" id="uploadTitle">...</span>
                 <input type="file" id="fileInput" accept="application/pdf">
             </label>
         </div>
@@ -238,6 +239,15 @@
                 <button class="btn" id="btnCancel" style="color: #b91c1c; border-color: #b91c1c;">
                     <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> HỦY BỎ
                 </button>
+                <hr style="width: 100%; border-top: 2px solid #000; margin: 0;">
+                
+                <button class="btn" id="btnUndo" title="Hoàn tác (Ctrl+Z)">
+                    <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg> HOÀN TÁC
+                </button>
+                <button class="btn" id="btnRedo" title="Làm lại (Ctrl+Y)">
+                    <svg viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg> LÀM LẠI
+                </button>
+                
                 <hr style="width: 100%; border-top: 2px solid #000; margin: 0;">
                 
                 <button class="btn" id="btnSelectAll" style="display: none;">
@@ -283,9 +293,9 @@
 
             <div id="loadingMsg">VUI LÒNG ĐỢI... ĐANG XỬ LÝ</div>
             
-            <!-- HEADER CỦA PREVIEW (CHỨA NÚT TOGGLE VIEW) -->
+            <!-- HEADER CỦA PREVIEW (HIỂN THỊ TÊN FILE VÀ NÚT TOGGLE VIEW) -->
             <div class="preview-header">
-                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Các trang PDF</h3>
+                <h3 id="previewTitle"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Các trang PDF</h3>
                 <button class="btn" id="btnToggleView">
                     <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> XEM CUỘN
                 </button>
@@ -299,7 +309,7 @@
     <!-- MODAL ZOOM -->
     <div id="zoomModal">
         <span id="closeModal">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </span>
         <button id="btnPrevPage" class="nav-btn">&lt;</button>
         <canvas id="zoomCanvas"></canvas>
