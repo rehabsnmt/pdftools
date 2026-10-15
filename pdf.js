@@ -389,7 +389,7 @@ async function processEncryptionViaAPI() {
     formData.append('permAnnotate', document.getElementById('permAnnotate').checked);
     formData.append('permAssemble', document.getElementById('permAssemble').checked);
 
-    // CHÚ Ý: Đổi thành URL Server backend của bạn khi triển khai thực tế
+    // CHÚ Ý: Đổi thành URL Server backend của bạn khi triển khai thực tế (hoặc URL Ngrok)
     const API_URL = 'http://localhost:3000/api/encrypt'; 
 
     const response = await fetch(API_URL, {
@@ -454,16 +454,39 @@ async function openZoomModal(index) {
         const item = pagesData[index];
         const page = await pdfDocuments[item.fileIdx].getPage(item.pageIdx + 1);
         
-        let viewport = page.getViewport({ scale: 1 });
-        const scale = Math.min((window.innerWidth * 0.85) / viewport.width, (window.innerHeight * 0.85) / viewport.height, 2.5); 
-        viewport = page.getViewport({ scale: scale });
+        // 1. Tính toán tỷ lệ hiển thị trên màn hình (CSS Scale)
+        let baseViewport = page.getViewport({ scale: 1 });
+        const displayScale = Math.min(
+            (window.innerWidth * 0.85) / baseViewport.width, 
+            (window.innerHeight * 0.85) / baseViewport.height, 
+            2.5 // Giới hạn zoom tối đa
+        );
+        
+        // 2. Lấy mật độ điểm ảnh của thiết bị (Retina thường là 2 hoặc 3)
+        // Nhân thêm 1.5 để ép độ nét lên mức tối đa
+        const pixelRatio = (window.devicePixelRatio || 1) * 1.5; 
+        const renderScale = displayScale * pixelRatio; 
+        
+        // 3. Tạo 2 Viewport: 1 để vẽ (chất lượng cực cao) và 1 để hiển thị (kích thước thật)
+        const renderViewport = page.getViewport({ scale: renderScale });
+        const displayViewport = page.getViewport({ scale: displayScale });
         
         const ctx = DOM.zoomCanvas.getContext('2d');
-        DOM.zoomCanvas.width = viewport.width; DOM.zoomCanvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        
+        // Cài đặt kích thước độ phân giải nội tại của Canvas (Rất to)
+        DOM.zoomCanvas.width = renderViewport.width; 
+        DOM.zoomCanvas.height = renderViewport.height;
+        
+        // Cài đặt kích thước hiển thị trên màn hình bằng CSS (Thu nhỏ lại để vừa màn hình)
+        DOM.zoomCanvas.style.width = `${displayViewport.width}px`;
+        DOM.zoomCanvas.style.height = `${displayViewport.height}px`;
+
+        // Vẽ PDF lên Canvas với độ phân giải siêu cao
+        await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
         
         DOM.zoomPageText.innerText = currentMode === 'merge' ? `${uploadedFiles[item.fileIdx].name} (${dict[currentLang].page_text} ${item.pageIdx + 1})` : `${dict[currentLang].page_text} ${item.pageIdx + 1}`;
     } catch (error) {
+        console.error(error);
         DOM.zoomPageText.innerText = "Error!";
     }
 }
