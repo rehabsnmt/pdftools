@@ -3,32 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Tools - Classic Gold</title>
+    <title>PDF Tools - Modern Flat</title>
     
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
     <style>
-        /* TONE MÀU CHỦ ĐẠO VÀNG GOLD - GIAO DIỆN PHẲNG (FLAT) CỔ ĐIỂN */
+        /* TONE MÀU CHỦ ĐẠO VÀNG GOLD - GIAO DIỆN FLAT HIỆN ĐẠI */
         :root { 
-            --bg-color: #E8E8E8; /* Xám cổ điển */
+            --bg-color: #E8E8E8; 
             --card-bg: #FFFFFF; 
             --text-main: #000000; 
-            --text-muted: #333333; 
+            --text-muted: #444444; 
             --accent-color: #D4AF37; /* Vàng Gold */
-            --border-color: #000000; /* Viền đen sắc nét */
+            --border-color: #000000; 
         }
 
-        /* Xóa bỏ mọi hiệu ứng bo góc, đổ bóng, transition hiện đại */
-        * {
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            transition: none !important;
-            text-shadow: none !important;
-        }
+        /* Xóa bo góc, đổ bóng để giữ chất Flat */
+        * { border-radius: 0 !important; box-shadow: none !important; transition: none !important; }
 
         body { 
-            font-family: Arial, Helvetica, sans-serif; /* Font chữ cơ bản */
+            font-family: 'Segoe UI', Arial, sans-serif; 
             background: var(--bg-color); color: var(--text-main); 
             margin: 0; padding: 2rem; display: flex; flex-direction: column; align-items: center; padding-bottom: 100px;
         }
@@ -39,6 +34,7 @@
             font-size: 2rem; font-weight: bold; margin: 0; 
             background: var(--accent-color); border: 2px solid var(--border-color); 
             padding: 10px 20px; color: #000; letter-spacing: 2px;
+            display: flex; align-items: center; gap: 10px;
         }
 
         .container { 
@@ -52,13 +48,17 @@
         
         .mode-card { 
             background: var(--bg-color); border: 2px solid var(--border-color); 
-            padding: 2rem 1rem; text-align: center; cursor: pointer; 
+            padding: 2.5rem 1rem; text-align: center; cursor: pointer; 
+            display: flex; flex-direction: column; align-items: center;
         }
         .mode-card:hover { background: var(--accent-color); }
         .mode-card:active { background: #000; color: var(--accent-color); }
-        .mode-card:active .mode-icon, .mode-card:active .mode-title, .mode-card:active .mode-desc { color: var(--accent-color); }
+        .mode-card:active svg { stroke: var(--accent-color); }
+        .mode-card:active .mode-title, .mode-card:active .mode-desc { color: var(--accent-color); }
 
-        .mode-icon { font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; color: #000; }
+        .mode-icon { margin-bottom: 15px; color: #000; }
+        .mode-icon svg { width: 48px; height: 48px; stroke-width: 1.5; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        
         .mode-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #000; }
         .mode-desc { font-size: 0.85rem; color: var(--text-muted); }
 
@@ -66,7 +66,7 @@
         #uploadScreen { padding: 4rem 2rem; text-align: center; display: none; }
         .upload-area { 
             border: 2px dashed var(--border-color); padding: 4rem 2rem; cursor: pointer; 
-            display: block; background: var(--bg-color); 
+            display: flex; flex-direction: column; align-items: center; background: var(--bg-color); 
         }
         .upload-area:hover { background: var(--accent-color); border: 2px solid var(--border-color); }
         .upload-area input { display: none; }
@@ -74,25 +74,26 @@
         /* BƯỚC 3: WORKSPACE (GIAO DIỆN XEM PDF) */
         #workspaceScreen { display: none; flex-direction: column; }
         
-        /* CÁC NÚT BẤM (BUTTONS) */
         .btn { 
-            background: #CCCCCC; color: #000; border: 2px solid var(--border-color); 
+            background: #E8E8E8; color: #000; border: 2px solid var(--border-color); 
             padding: 8px 12px; cursor: pointer; font-weight: bold; 
             display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; justify-content: center;
         }
-        .btn:hover { background: #AAAAAA; }
+        .btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round;}
+        .btn:hover { background: #CCCCCC; }
         .btn:active { background: #000; color: #FFF; }
         
         .btn-primary { background: var(--accent-color); color: #000; }
         .btn-primary:hover { background: #DAA520; }
         .btn-primary:active { background: #000; color: var(--accent-color); }
 
-        /* THANH CÔNG CỤ NỔI BÊN PHẢI (CLASSIC) */
+        /* THANH CÔNG CỤ NỔI BÊN PHẢI */
         .floating-toolbar {
             position: fixed; right: 25px; top: 50%; transform: translateY(-50%);
             background: var(--card-bg); padding: 15px; border: 2px solid var(--border-color);
-            display: flex; flex-direction: column; gap: 10px; z-index: 1000; width: 160px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 1000; width: max-content;
         }
+        .floating-toolbar .btn { justify-content: flex-start; }
         
         @media (max-width: 1300px) {
             .floating-toolbar {
@@ -109,18 +110,24 @@
         #encryptOptions { display: none; background: var(--bg-color); padding: 2rem; border-bottom: 2px solid var(--border-color); }
         .encrypt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .form-group { display: flex; flex-direction: column; gap: 10px; }
-        .form-group input[type="password"] { padding: 8px; border: 2px solid var(--border-color); background: #FFF; outline: none; }
+        .form-group input[type="password"] { padding: 10px; border: 2px solid var(--border-color); background: #FFF; outline: none; font-size: 1rem; }
         .form-group input[type="password"]:focus { background: #FFFFE0; }
         
         .checkbox-group { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 5px; }
         .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; }
-        /* Sử dụng checkbox vuông mặc định của trình duyệt cho đúng chất hoài cổ */
-        .checkbox-label input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
+        .checkbox-label input[type="checkbox"] { cursor: pointer; width: 18px; height: 18px; border: 2px solid #000; }
 
         @media (max-width: 768px) { .encrypt-grid { grid-template-columns: 1fr; gap: 20px; } }
 
+        /* KHU VỰC TIÊU ĐỀ PREVIEW VÀ NÚT TOGGLE VIEW */
+        .preview-header {
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px 2rem; border-bottom: 2px solid var(--border-color); background: #F5F5F5;
+        }
+        .preview-header h3 { margin: 0; font-size: 1.1rem; text-transform: uppercase; display: flex; align-items: center; gap: 8px;}
+
         /* KHU VỰC PREVIEW GRID */
-        #previewGrid { padding: 2rem; background: var(--card-bg); max-height: 70vh; overflow-y: scroll; border-top: 2px solid var(--border-color); }
+        #previewGrid { padding: 2rem; background: var(--card-bg); max-height: 65vh; overflow-y: scroll; }
         
         #previewGrid.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
         #previewGrid.list-view { display: flex; flex-direction: column; align-items: center; gap: 30px; }
@@ -129,16 +136,15 @@
         .page-card { position: relative; background: var(--bg-color); padding: 10px; border: 2px solid var(--border-color); text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
         .page-card.selected { background: var(--accent-color); }
         
-        /* KHUNG CHỨA CANVAS ĐỂ XOAY CẢ KHUNG */
         .canvas-frame { border: 2px solid var(--border-color); background: #FFF; padding: 4px; display: inline-block; margin-bottom: 10px; }
         .canvas-frame canvas { display: block; width: 100%; height: auto; }
 
-        .page-number { font-weight: bold; background: #FFF; border: 1px solid #000; padding: 2px 5px; width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .page-number { font-weight: bold; background: #FFF; border: 1px solid #000; padding: 4px 5px; width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;}
         
-        .selected-badge { position: absolute; top: -10px; right: -10px; background: #000; color: var(--accent-color); border: 2px solid var(--accent-color); width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-weight: bold; z-index: 10; }
+        .selected-badge { position: absolute; top: -10px; right: -10px; background: #000; color: var(--accent-color); border: 2px solid var(--accent-color); width: 26px; height: 26px; display: none; align-items: center; justify-content: center; font-weight: bold; z-index: 10; }
         .page-card.selected .selected-badge { display: flex; }
         
-        .zoom-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #000; color: #FFF; font-weight: bold; border: 2px solid var(--accent-color); padding: 5px 15px; cursor: pointer; display: none; }
+        .zoom-btn { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: #000; color: #FFF; font-weight: bold; border: 2px solid var(--accent-color); padding: 5px 15px; cursor: pointer; display: none; }
         .page-card:hover .zoom-btn { display: block; }
         .dragging { opacity: 0.5; border-style: dashed; }
         .drag-over { border-color: red; }
@@ -146,7 +152,7 @@
         #loadingMsg { text-align: center; padding: 1rem; display: none; font-weight: bold; background: var(--accent-color); color: #000; border-bottom: 2px solid var(--border-color); }
 
         /* MODAL ZOOM NỀN XÁM */
-        #zoomModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(200,200,200,0.95); justify-content: center; align-items: center; flex-direction: column; }
+        #zoomModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(220,220,220,0.95); justify-content: center; align-items: center; flex-direction: column; }
         #zoomModal.active { display: flex; }
         #closeModal { position: absolute; top: 15px; right: 25px; color: #000; font-size: 30px; cursor: pointer; font-weight: bold; }
         .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: var(--accent-color); color: #000; border: 2px solid #000; font-size: 1.5rem; padding: 5px 15px; cursor: pointer; font-weight: bold;}
@@ -159,37 +165,50 @@
 <body>
 
     <div class="header">
-        <h1 class="app-logo">PDF TOOLS</h1>
+        <h1 class="app-logo">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            PDF TOOLS
+        </h1>
     </div>
 
     <div class="container">
         <!-- BƯỚC 1: CHỌN TÍNH NĂNG -->
         <div id="homeScreen">
-            <h2 style="text-align: center; margin-top: 0; margin-bottom: 5px;">BẠN MUỐN LÀM GÌ?</h2>
+            <h2 style="text-align: center; margin-top: 0; margin-bottom: 5px; text-transform: uppercase;">Bạn muốn làm gì?</h2>
             <p style="text-align: center; color: var(--text-muted);">Vui lòng chọn một chức năng bên dưới</p>
             <div class="mode-grid">
                 <div class="mode-card" data-mode="merge">
-                    <div class="mode-icon">[ + ]</div>
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M12 18v-6M9 15h6"/></svg>
+                    </div>
                     <div class="mode-title">GỘP PDF</div>
                     <div class="mode-desc">Nối nhiều file thành một</div>
                 </div>
                 <div class="mode-card" data-mode="extract">
-                    <div class="mode-icon">[ &lt; &gt; ]</div>
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                    </div>
                     <div class="mode-title">TÁCH PDF</div>
                     <div class="mode-desc">Trích xuất các trang đã chọn</div>
                 </div>
                 <div class="mode-card" data-mode="delete">
-                    <div class="mode-icon">[ X ]</div>
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </div>
                     <div class="mode-title">XÓA TRANG</div>
                     <div class="mode-desc">Loại bỏ các trang thừa</div>
                 </div>
                 <div class="mode-card" data-mode="rotate">
-                    <div class="mode-icon">[ R ]</div>
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/></svg>
+                    </div>
                     <div class="mode-title">XOAY PDF</div>
                     <div class="mode-desc">Sửa lỗi trang bị ngược</div>
                 </div>
                 <div class="mode-card" data-mode="encrypt">
-                    <div class="mode-icon">[ S ]</div>
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
                     <div class="mode-title">BẢO MẬT</div>
                     <div class="mode-desc">Đặt mật khẩu & Phân quyền</div>
                 </div>
@@ -198,11 +217,15 @@
 
         <!-- BƯỚC 2: UPLOAD -->
         <div id="uploadScreen">
-            <button class="btn" id="btnBackHome" style="margin-bottom: 20px;">[ &lt; ] QUAY LẠI</button>
+            <button class="btn" id="btnBackHome" style="margin-bottom: 20px;">
+                <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> QUAY LẠI
+            </button>
             <label class="upload-area" id="dropZone">
-                <span class="upload-icon" style="font-size: 2rem; font-weight: bold;">[ ^ ]</span>
-                <span style="font-size: 1.3rem; font-weight: bold; display: block; margin-top: 10px;" id="uploadTitle">...</span>
-                <span style="color: var(--text-muted; font-size: 0.95rem;" id="uploadSub">...</span>
+                <span class="upload-icon" style="color: #000;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </span>
+                <span style="font-size: 1.3rem; font-weight: bold; display: block; margin-top: 15px; text-transform: uppercase;" id="uploadTitle">...</span>
+                <span style="color: var(--text-muted); font-size: 0.95rem; margin-top: 5px; display: block;" id="uploadSub">...</span>
                 <input type="file" id="fileInput" accept="application/pdf">
             </label>
         </div>
@@ -212,13 +235,24 @@
             
             <!-- THANH CÔNG CỤ NỔI BÊN PHẢI -->
             <div class="floating-toolbar" id="floatingToolbar">
-                <button class="btn btn-cancel" id="btnCancel">[X] HỦY BỎ</button>
-                <hr style="width: 100%; border-top: 2px solid #000;">
-                <button class="btn" id="btnToggleView">[V] XEM CUỘN</button>
-                <button class="btn" id="btnSelectAll" style="display: none;">[A] CHỌN TẤT CẢ</button>
-                <button class="btn" id="btnInvert" style="display: none;">[I] ĐẢO CHỌN</button>
-                <button class="btn" id="btnActionRotate" style="display: none;">[R] XOAY 90°</button>
-                <button class="btn btn-primary" id="btnExecute">[!] <span id="executeText">THỰC THI</span></button>
+                <button class="btn" id="btnCancel" style="color: #b91c1c; border-color: #b91c1c;">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> HỦY BỎ
+                </button>
+                <hr style="width: 100%; border-top: 2px solid #000; margin: 0;">
+                
+                <button class="btn" id="btnSelectAll" style="display: none;">
+                    <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> CHỌN TẤT CẢ
+                </button>
+                <button class="btn" id="btnInvert" style="display: none;">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20"/></svg> ĐẢO CHỌN
+                </button>
+                <button class="btn" id="btnActionRotate" style="display: none;">
+                    <svg viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/></svg> XOAY 90°
+                </button>
+                
+                <button class="btn btn-primary" id="btnExecute">
+                    <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> <span id="executeText">THỰC THI</span>
+                </button>
             </div>
             
             <!-- KHU VỰC CẤU HÌNH MÃ HÓA -->
@@ -249,6 +283,14 @@
 
             <div id="loadingMsg">VUI LÒNG ĐỢI... ĐANG XỬ LÝ</div>
             
+            <!-- HEADER CỦA PREVIEW (CHỨA NÚT TOGGLE VIEW) -->
+            <div class="preview-header">
+                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Các trang PDF</h3>
+                <button class="btn" id="btnToggleView">
+                    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> XEM CUỘN
+                </button>
+            </div>
+
             <!-- LƯỚI PREVIEW -->
             <div id="previewGrid" class="grid-view"></div>
         </div>
@@ -256,7 +298,9 @@
 
     <!-- MODAL ZOOM -->
     <div id="zoomModal">
-        <span id="closeModal">[ X ]</span>
+        <span id="closeModal">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </span>
         <button id="btnPrevPage" class="nav-btn">&lt;</button>
         <canvas id="zoomCanvas"></canvas>
         <button id="btnNextPage" class="nav-btn">&gt;</button>
