@@ -15,6 +15,9 @@ let pagesData = [];
 let currentZoomIndex = -1;
 let isListView = false; 
 
+// Biến hỗ trợ Ctrl+Click chọn nhiều trang
+let lastSelectedIndex = -1;
+
 let currentModalZoom = 1;
 let baseDisplayWidth = 0;
 let baseDisplayHeight = 0;
@@ -69,12 +72,12 @@ zoomControls.style.marginTop = '15px';
 zoomControls.style.zIndex = '1001';
 
 const btnZoomOut = document.createElement('button');
-btnZoomOut.innerText = '[ - ]';
-btnZoomOut.style.cssText = 'background: #E8E8E8; border: 2px solid #000; font-size: 1.2rem; font-weight: bold; padding: 5px 15px; cursor: pointer;';
+btnZoomOut.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+btnZoomOut.style.cssText = 'background: #E8E8E8; border: 2px solid #000; padding: 5px 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
 
 const btnZoomIn = document.createElement('button');
-btnZoomIn.innerText = '[ + ]';
-btnZoomIn.style.cssText = 'background: #E8E8E8; border: 2px solid #000; font-size: 1.2rem; font-weight: bold; padding: 5px 15px; cursor: pointer;';
+btnZoomIn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+btnZoomIn.style.cssText = 'background: #E8E8E8; border: 2px solid #000; padding: 5px 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
 
 zoomControls.appendChild(btnZoomOut);
 zoomControls.appendChild(btnZoomIn);
@@ -130,10 +133,10 @@ function setupWorkspaceUI() {
     DOM.fileInput.multiple = isMerge;
     DOM.uploadTitle.innerText = isMerge ? 'KÉO THẢ NHIỀU FILE VÀO ĐÂY' : 'KÉO THẢ 1 FILE VÀO ĐÂY';
     
-    let subKey = 'Để chọn các trang cần xử lý';
+    let subKey = 'Giữ phím Ctrl và Click để chọn nhanh nhiều trang';
     if (isMerge) subKey = 'Kéo thả để đổi vị trí các trang';
-    else if (currentMode === 'rotate') subKey = 'Để xoay các trang bị ngược';
-    else if (currentMode === 'encrypt') subKey = 'Để thiết lập mật khẩu và quyền';
+    else if (currentMode === 'rotate') subKey = 'Nhấp vào trang để chọn, sau đó bấm nút Xoay 90°';
+    else if (currentMode === 'encrypt') subKey = 'Điền thông tin mật khẩu ở bảng bên dưới';
     DOM.uploadSub.innerText = subKey;
 
     const isSelectionMode = ['extract', 'delete', 'rotate'].includes(currentMode);
@@ -166,10 +169,11 @@ function resetToHome() {
 
     isListView = false;
     DOM.previewGrid.className = 'grid-view';
-    DOM.btnToggleView.innerHTML = '[V] XEM CUỘN';
+    DOM.btnToggleView.innerHTML = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> XEM CUỘN';
 
     currentMode = '';
     uploadedFiles = []; pdfDocuments = []; sourcePdfDocuments = []; pagesData = [];
+    lastSelectedIndex = -1; // Reset selection index
 }
 
 DOM.btnBackHome.addEventListener('click', resetToHome);
@@ -180,10 +184,10 @@ DOM.btnToggleView.addEventListener('click', async () => {
     
     if (isListView) {
         DOM.previewGrid.className = 'list-view';
-        DOM.btnToggleView.innerHTML = '[G] XEM LƯỚI';
+        DOM.btnToggleView.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> XEM LƯỚI';
     } else {
         DOM.previewGrid.className = 'grid-view';
-        DOM.btnToggleView.innerHTML = '[V] XEM CUỘN';
+        DOM.btnToggleView.innerHTML = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> XEM CUỘN';
     }
     
     DOM.loadingMsg.innerHTML = `VUI LÒNG ĐỢI...`;
@@ -209,6 +213,7 @@ async function handleFiles(files) {
     pagesData = []; 
     pdfDocuments = []; 
     sourcePdfDocuments = [];
+    lastSelectedIndex = -1; // Reset selection index on new file
 
     uploadedFiles = currentMode === 'merge' ? validFiles : [validFiles[0]];
     
@@ -240,7 +245,7 @@ async function handleFiles(files) {
 }
 
 // ==========================================
-// 6. RENDER GRID VÀ KÉO THẢ
+// 6. RENDER GRID VÀ KÉO THẢ (VỚI TÍNH NĂNG CTRL+CLICK)
 // ==========================================
 async function renderGrid() {
     DOM.previewGrid.innerHTML = '';
@@ -262,14 +267,16 @@ async function renderGrid() {
             ? `${uploadedFiles[item.fileIdx].name} (Trang ${i + 1})` 
             : `Trang ${i + 1}`;
 
-        // THAY ĐỔI LỚN NHẤT: BỌC CANVAS BẰNG THẺ DIV.CANVAS-FRAME ĐỂ XOAY KHUNG NÀY THAY VÌ CANVAS
+        // BỌC CANVAS BẰNG THẺ DIV.CANVAS-FRAME ĐỂ XOAY KHUNG NÀY THAY VÌ CANVAS
         card.innerHTML = `
-            <div class="selected-badge">[X]</div>
+            <div class="selected-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div class="canvas-frame">
                 <canvas></canvas>
             </div>
             <div class="page-number" title="${titleText}">${titleText}</div>
-            <button class="zoom-btn">[ Z ]</button>
+            <button class="zoom-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
         `;
         
         const canvas = card.querySelector('canvas');
@@ -278,9 +285,26 @@ async function renderGrid() {
         applyCardRotation(card, item.rotation);
 
         if (currentMode !== 'merge' && currentMode !== 'encrypt') {
-            card.addEventListener('click', () => {
-                item.selected = !item.selected;
-                card.classList.toggle('selected', item.selected);
+            card.addEventListener('click', (e) => {
+                // Xử lý giữ phím Ctrl để chọn một loạt các trang
+                if (e.ctrlKey && lastSelectedIndex !== -1) {
+                    const start = Math.min(lastSelectedIndex, i);
+                    const end = Math.max(lastSelectedIndex, i);
+                    
+                    // Lấy trạng thái của trang bắt đầu làm chuẩn
+                    const targetState = pagesData[lastSelectedIndex].selected;
+                    
+                    for (let j = start; j <= end; j++) {
+                        pagesData[j].selected = targetState;
+                        const targetCard = DOM.previewGrid.querySelector(`.page-card[data-index="${j}"]`);
+                        if (targetCard) targetCard.classList.toggle('selected', targetState);
+                    }
+                } else {
+                    // Click thông thường
+                    item.selected = !item.selected;
+                    card.classList.toggle('selected', item.selected);
+                    lastSelectedIndex = i; // Lưu lại vị trí để làm mốc cho Ctrl+Click sau
+                }
             });
         }
 
@@ -297,6 +321,7 @@ async function renderGrid() {
             if (fromIdx !== toIdx) {
                 const movedPage = pagesData.splice(fromIdx, 1)[0];
                 pagesData.splice(toIdx, 0, movedPage);
+                lastSelectedIndex = -1; // Xóa mốc chọn khi thay đổi vị trí
                 await renderGrid(); 
             }
         });
@@ -306,16 +331,29 @@ async function renderGrid() {
 }
 
 function applyCardRotation(card, rotation) {
-    // SỬA ĐỔI: Nhắm mục tiêu vào .canvas-frame để xoay toàn bộ viền chứa ảnh
     const frame = card.querySelector('.canvas-frame');
     if (frame) frame.style.transform = `rotate(${rotation}deg)`;
 }
 
-DOM.btnSelectAll.addEventListener('click', () => { pagesData.forEach(p => p.selected = true); renderGrid(); });
-DOM.btnInvert.addEventListener('click', () => { pagesData.forEach(p => p.selected = !p.selected); renderGrid(); });
+DOM.btnSelectAll.addEventListener('click', () => { 
+    pagesData.forEach(p => p.selected = true); 
+    Array.from(DOM.previewGrid.children).forEach(card => card.classList.add('selected'));
+});
+DOM.btnInvert.addEventListener('click', () => { 
+    pagesData.forEach((p, i) => {
+        p.selected = !p.selected; 
+        const card = DOM.previewGrid.querySelector(`.page-card[data-index="${i}"]`);
+        if (card) card.classList.toggle('selected', p.selected);
+    });
+});
 DOM.btnActionRotate.addEventListener('click', () => {
-    pagesData.forEach(p => { if (p.selected) p.rotation = (p.rotation + 90) % 360; });
-    renderGrid();
+    pagesData.forEach((p, i) => { 
+        if (p.selected) {
+            p.rotation = (p.rotation + 90) % 360; 
+            const card = DOM.previewGrid.querySelector(`.page-card[data-index="${i}"]`);
+            if (card) applyCardRotation(card, p.rotation);
+        }
+    });
 });
 
 // ==========================================
@@ -382,7 +420,7 @@ async function processLocalPDF() {
     else if (currentMode === 'extract') pagesToKeep = pagesData.filter(p => p.selected);
     else if (currentMode === 'delete') pagesToKeep = pagesData.filter(p => !p.selected);
 
-    if (pagesToKeep.length === 0) throw new Error('Không có trang nào để xuất! Vui lòng kiểm tra lại thao tác.');
+    if (pagesToKeep.length === 0) throw new Error('Không có trang nào được chọn! Vui lòng chọn trang để xử lý.');
 
     for (const item of pagesToKeep) {
         const sourcePdf = sourcePdfDocuments[item.fileIdx];
