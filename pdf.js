@@ -13,6 +13,7 @@ let pdfDocuments = [];
 let sourcePdfDocuments = [];
 let pagesData = []; 
 let currentZoomIndex = -1;
+let isListView = false; // Biến kiểm tra dạng xem Lưới hay Cuộn Lớn
 
 // Biến hỗ trợ tính năng Zoom In / Zoom Out Modal
 let currentModalZoom = 1;
@@ -44,6 +45,7 @@ const DOM = {
     btnSelectAll: document.getElementById('btnSelectAll'),
     btnInvert: document.getElementById('btnInvert'),
     btnActionRotate: document.getElementById('btnActionRotate'),
+    btnToggleView: document.getElementById('btnToggleView'),
 
     zoomModal: document.getElementById('zoomModal'),
     zoomCanvas: document.getElementById('zoomCanvas'),
@@ -69,21 +71,17 @@ zoomControls.style.zIndex = '1001';
 
 const btnZoomOut = document.createElement('button');
 btnZoomOut.innerText = '➖';
-btnZoomOut.className = 'btn';
-btnZoomOut.style.fontSize = '1.2rem';
-btnZoomOut.style.padding = '5px 15px';
+btnZoomOut.style.cssText = 'background: #fff; border: none; font-size: 1.2rem; padding: 5px 15px; border-radius: 6px; cursor: pointer;';
 
 const btnZoomIn = document.createElement('button');
 btnZoomIn.innerText = '➕';
-btnZoomIn.className = 'btn';
-btnZoomIn.style.fontSize = '1.2rem';
-btnZoomIn.style.padding = '5px 15px';
+btnZoomIn.style.cssText = 'background: #fff; border: none; font-size: 1.2rem; padding: 5px 15px; border-radius: 6px; cursor: pointer;';
 
 zoomControls.appendChild(btnZoomOut);
 zoomControls.appendChild(btnZoomIn);
 DOM.zoomModal.appendChild(zoomControls);
 
-// Hàm áp dụng tỷ lệ Zoom lên Canvas
+// Hàm áp dụng tỷ lệ Zoom lên Canvas Modal
 function applyZoom() {
     DOM.zoomCanvas.style.width = `${baseDisplayWidth * currentModalZoom}px`;
     DOM.zoomCanvas.style.height = `${baseDisplayHeight * currentModalZoom}px`;
@@ -105,7 +103,6 @@ btnZoomOut.addEventListener('click', (e) => {
     }
 });
 
-// Hỗ trợ giữ Ctrl + Lăn chuột để phóng to thu nhỏ
 zoomWrapper.addEventListener('wheel', (e) => {
     if (e.ctrlKey) {
         e.preventDefault();
@@ -133,7 +130,6 @@ function setupWorkspaceUI() {
     const isEncrypt = currentMode === 'encrypt';
     
     DOM.fileInput.multiple = isMerge;
-    
     DOM.uploadTitle.innerText = isMerge ? 'Kéo thả nhiều file PDF vào đây' : 'Kéo thả 1 file PDF vào đây';
     
     let subKey = 'Để chọn các trang cần xử lý';
@@ -143,9 +139,9 @@ function setupWorkspaceUI() {
     DOM.uploadSub.innerText = subKey;
 
     const isSelectionMode = ['extract', 'delete', 'rotate'].includes(currentMode);
-    DOM.btnSelectAll.style.display = isSelectionMode ? 'block' : 'none';
-    DOM.btnInvert.style.display = isSelectionMode ? 'block' : 'none';
-    DOM.btnActionRotate.style.display = currentMode === 'rotate' ? 'block' : 'none';
+    DOM.btnSelectAll.style.display = isSelectionMode ? 'flex' : 'none';
+    DOM.btnInvert.style.display = isSelectionMode ? 'flex' : 'none';
+    DOM.btnActionRotate.style.display = currentMode === 'rotate' ? 'flex' : 'none';
 
     if (DOM.encryptOptions) {
         DOM.encryptOptions.style.display = isEncrypt ? 'block' : 'none';
@@ -170,12 +166,36 @@ function resetToHome() {
     if(document.getElementById('userPassword')) document.getElementById('userPassword').value = '';
     if(document.getElementById('ownerPassword')) document.getElementById('ownerPassword').value = '';
 
+    // Reset chế độ xem về dạng lưới
+    isListView = false;
+    DOM.previewGrid.className = 'grid-view';
+    DOM.btnToggleView.innerHTML = '📄 Dạng cuộn lớn';
+
     currentMode = '';
     uploadedFiles = []; pdfDocuments = []; sourcePdfDocuments = []; pagesData = [];
 }
 
 DOM.btnBackHome.addEventListener('click', resetToHome);
 DOM.btnCancel.addEventListener('click', resetToHome);
+
+// CHUYỂN ĐỔI CHẾ ĐỘ XEM
+DOM.btnToggleView.addEventListener('click', async () => {
+    isListView = !isListView;
+    
+    if (isListView) {
+        DOM.previewGrid.className = 'list-view';
+        DOM.btnToggleView.innerHTML = '🔲 Dạng lưới nhỏ';
+    } else {
+        DOM.previewGrid.className = 'grid-view';
+        DOM.btnToggleView.innerHTML = '📄 Dạng cuộn lớn';
+    }
+    
+    // Tải lại lưới (để canvas render ở độ phân giải lớn hơn cho sắc nét)
+    DOM.loadingMsg.style.display = 'block';
+    DOM.previewGrid.innerHTML = '';
+    await renderGrid();
+    DOM.loadingMsg.style.display = 'none';
+});
 
 // ==========================================
 // 5. XỬ LÝ UPLOAD FILE
@@ -232,7 +252,10 @@ async function renderGrid() {
     for (let i = 0; i < pagesData.length; i++) {
         const item = pagesData[i];
         const page = await pdfDocuments[item.fileIdx].getPage(item.pageIdx + 1);
-        const viewport = page.getViewport({ scale: 0.4 });
+        
+        // Render nét căng nếu đang ở dạng cuộn lớn (isListView = true)
+        const renderScale = isListView ? 1.5 : 0.4;
+        const viewport = page.getViewport({ scale: renderScale });
         
         const card = document.createElement('div');
         card.className = 'page-card';
@@ -247,7 +270,7 @@ async function renderGrid() {
         card.innerHTML = `
             <div class="selected-badge">✓</div>
             <canvas></canvas>
-            <div class="page-number" style="font-size:0.75rem; color:var(--text-muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${titleText}</div>
+            <div class="page-number" style="color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${titleText}</div>
             <button class="zoom-btn" title="Zoom">🔍</button>
         `;
         
@@ -265,7 +288,6 @@ async function renderGrid() {
 
         card.querySelector('.zoom-btn').addEventListener('click', e => { e.stopPropagation(); openZoomModal(i); });
 
-        // Logic kéo thả sắp xếp
         card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', i); });
         card.addEventListener('dragend', () => card.classList.remove('dragging'));
         card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
@@ -317,7 +339,6 @@ DOM.btnExecute.addEventListener('click', async () => {
     DOM.loadingMsg.style.display = 'none';
 });
 
-// Hàm xử lý MÃ HÓA gửi qua Backend Node.js
 async function processEncryptionViaAPI() {
     if (!uploadedFiles || uploadedFiles.length === 0) throw new Error('Vui lòng chọn file PDF!');
     
@@ -354,7 +375,6 @@ async function processEncryptionViaAPI() {
     URL.revokeObjectURL(url);
 }
 
-// Hàm xử lý các tác vụ cục bộ (Gộp, Tách, Xóa, Xoay)
 async function processLocalPDF() {
     const newPdf = await PDFDocument.create();
     let pagesToKeep = [];
